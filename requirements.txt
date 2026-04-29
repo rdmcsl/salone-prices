@@ -1,0 +1,24 @@
+# SalonePrices – Python dependencies
+# Install with: pip install -r requirements.txt
+
+# Africa's Talking SDK (SMS + USSD)
+africastalking==1.2.8
+
+# Google Sheets
+gspread==6.1.2
+google-auth==2.29.0
+
+# Web server
+flask==3.0.3
+gunicorn==22.0.0          # production WSGI server
+
+# Scheduler (cron jobs)
+APScheduler==3.10.4
+pytz==2024.1
+
+# Utilities
+python-dotenv==1.0.1      # loads .env file
+requests==2.31.0          # for any direct HTTP calls
+
+# Testing
+pytest==8.2.0
