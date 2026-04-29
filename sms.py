@@ -25,8 +25,12 @@ from sheets import get_active_subscribers, get_best_market
 logger = logging.getLogger(__name__)
 
 # Initialise Africa's Talking SDK once at import time
-africastalking.initialize(AT_USERNAME, AT_API_KEY)
-_sms = africastalking.SMS
+try:
+    africastalking.initialize(AT_USERNAME, AT_API_KEY)
+    _sms = africastalking.SMS
+except Exception as e:
+    logger.warning("AT not initialized: %s", e)
+    _sms = None
 
 
 # ── Message formatting ───────────────────────────────────────────────────────
@@ -122,6 +126,9 @@ def send_sms(phone: str, message: str) -> dict:
     Sends a single SMS. Returns the Africa's Talking response dict.
     Phone must be in international format: +23276XXXXXXX
     """
+    if _sms is None:
+        logger.warning("SMS skipped (AT not initialized): %s", phone)
+        return {"error": "AT not initialized"}
     try:
         response = _sms.send(message, [phone], sender_id=AT_SENDER_ID)
         logger.debug("SMS sent to %s: %s", phone, response)

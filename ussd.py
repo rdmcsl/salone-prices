@@ -150,21 +150,30 @@ def _subscribe_flow(session_id: str, phone: str, parts: list[str]) -> str:
     crop_names = ", ".join(CROPS[c]["name"] for c in chosen_crops)
     fee_display = "FREE for 4 weeks, then NLE 5,000/month"
 
-    # Register subscriber in Google Sheets
-    success = add_subscriber(
-        phone=phone,
-        name=name,
-        district=district,
-        crops=chosen_crops,
-        plan="individual",
-    )
+    # Register subscriber (graceful fallback if Google Sheets not configured yet)
+    try:
+        success = add_subscriber(
+            phone=phone,
+            name=name,
+            district=district,
+            crops=chosen_crops,
+            plan="individual",
+        )
+        if not success:
+            return "END You are already subscribed. Dial *384*4321# to manage."
+    except Exception as e:
+        logger.warning("Sheets not configured, saving locally: %s", e)
+        import os
+        os.makedirs("logs", exist_ok=True)
+        with open("logs/subscribers_pending.txt", "a") as f:
+            f.write(f"{phone},{name},{district},{','.join(chosen_crops)}\n")
 
-    if not success:
-        return "END You are already subscribed. Dial *384*4321# to manage."
-
-    # Send welcome SMS
-    welcome = format_welcome_sms(name, chosen_crops)
-    send_sms(phone, welcome)
+    # Send welcome SMS (graceful fallback if not configured)
+    try:
+        welcome = format_welcome_sms(name, chosen_crops)
+        send_sms(phone, welcome)
+    except Exception as e:
+        logger.warning("Welcome SMS not sent: %s", e)
 
     return (
         f"END You're registered, {name.split()[0]}!\n"
