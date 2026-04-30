@@ -9,7 +9,7 @@ load_dotenv()
 
 # ── Africa's Talking ─────────────────────────────────────────────────────────
 AT_API_KEY        = os.getenv("AT_API_KEY", "")
-AT_USERNAME       = os.getenv("AT_USERNAME", "sandbox")   # change to your username in prod
+AT_USERNAME       = os.getenv("AT_USERNAME", "sandbox")
 AT_SENDER_ID      = os.getenv("AT_SENDER_ID", "SalonePrices")  # must be approved by AT
 AT_USSD_CODE      = os.getenv("AT_USSD_CODE", "*384*4321#")
 
@@ -26,8 +26,8 @@ ORANGE_CURRENCY      = "SLE"  # new Leone
 # Google credentials can be a file path OR raw JSON string in env var
 GOOGLE_CREDS_JSON    = os.getenv("GOOGLE_CREDS_JSON", "google_credentials.json")
 GOOGLE_CREDS_CONTENT = os.getenv("GOOGLE_CREDS_CONTENT", "")  # raw JSON string
-PRICES_SHEET_ID      = os.getenv("PRICES_SHEET_ID", "")   # your Google Sheet ID from the URL
-SUBSCRIBERS_SHEET_ID = os.getenv("SUBSCRIBERS_SHEET_ID", "")  # can be same sheet, different tab
+PRICES_SHEET_ID      = os.getenv("PRICES_SHEET_ID", "1K7vaC5oT9cujtzpHTal9bBnll85y8sZ-f0f5qnnvlZQ")
+SUBSCRIBERS_SHEET_ID = os.getenv("SUBSCRIBERS_SHEET_ID", "1K7vaC5oT9cujtzpHTal9bBnll85y8sZ-f0f5qnnvlZQ")
 
 # ── App settings ─────────────────────────────────────────────────────────────
 SUBSCRIPTION_FEE_NLE = 5_000        # NLE per month per individual farmer
