@@ -60,8 +60,7 @@ def _get_client() -> gspread.Client:
             info = _json.loads(creds_str)
         # Ensure private key newlines are correct
         if "private_key" in info:
-            info["private_key"] = info["private_key"].replace("\n", "
-")
+            info["private_key"] = info["private_key"].replace("\\n", "\n")
         creds = Credentials.from_service_account_info(info, scopes=SCOPES)
     else:
         # Load from file (local development)
