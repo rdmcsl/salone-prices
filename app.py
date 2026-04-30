@@ -334,6 +334,125 @@ def test_page():
         return jsonify({"status": "ok", "note": str(e)}), 200
 
 
+# ── Admin panel (browser-friendly) ───────────────────────────────────────────
+
+@app.route("/admin", methods=["GET"])
+def admin_panel():
+    """Simple browser admin panel — no tools needed."""
+    html = """<!DOCTYPE html>
+<html>
+<head>
+  <title>SalonePrices Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background: #f9f9f9; }
+    h1 { color: #2d6a4f; }
+    .card { background: white; border-radius: 12px; padding: 20px; margin: 16px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    button { background: #2d6a4f; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 15px; cursor: pointer; width: 100%; margin-top: 8px; }
+    button:hover { background: #1b4332; }
+    .result { margin-top: 12px; padding: 12px; background: #f0f4f0; border-radius: 8px; font-family: monospace; font-size: 13px; white-space: pre-wrap; display: none; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 12px; background: #d8f3dc; color: #1b4332; margin-bottom: 8px; }
+    input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-top: 4px; }
+    label { font-size: 13px; color: #555; }
+  </style>
+</head>
+<body>
+  <h1>🌾 SalonePrices Admin</h1>
+  <p style="color:#555">Control panel for your Sierra Leone crop price SMS service</p>
+
+  <div class="card">
+    <span class="badge">Live</span>
+    <h3 style="margin:0 0 4px">System Status</h3>
+    <p style="color:#555;font-size:14px">Check if server and Google Sheets are connected</p>
+    <button onclick="callApi('GET', '/test', null, 'status-result')">Check Status</button>
+    <div class="result" id="status-result"></div>
+  </div>
+
+  <div class="card">
+    <span class="badge">Auto</span>
+    <h3 style="margin:0 0 4px">Fetch WFP Prices</h3>
+    <p style="color:#555;font-size:14px">Pull latest rice, cassava, palm oil prices from WFP database → write to your Google Sheet automatically</p>
+    <button onclick="callApi('POST', '/admin/fetch-prices', null, 'fetch-result')">Fetch WFP Prices Now</button>
+    <div class="result" id="fetch-result"></div>
+  </div>
+
+  <div class="card">
+    <span class="badge">Preview</span>
+    <h3 style="margin:0 0 4px">Preview This Week's SMS</h3>
+    <p style="color:#555;font-size:14px">See what farmers will receive before sending</p>
+    <button onclick="callApi('GET', '/admin/blast-preview', null, 'preview-result')">Preview SMS Blast</button>
+    <div class="result" id="preview-result"></div>
+  </div>
+
+  <div class="card">
+    <span class="badge">Send</span>
+    <h3 style="margin:0 0 4px">Trigger SMS Blast</h3>
+    <p style="color:#555;font-size:14px">Send this week's price alerts to all subscribers now (normally runs Monday 7am automatically)</p>
+    <button onclick="callApi('POST', '/admin/trigger-blast', null, 'blast-result')" style="background:#c0392b">Send SMS to All Subscribers</button>
+    <div class="result" id="blast-result"></div>
+  </div>
+
+  <div class="card">
+    <span class="badge">Subscribers</span>
+    <h3 style="margin:0 0 4px">Subscriber Count</h3>
+    <button onclick="callApi('GET', '/admin/subscribers', null, 'subs-result')">View Subscribers</button>
+    <div class="result" id="subs-result"></div>
+  </div>
+
+  <div class="card">
+    <span class="badge">WhatsApp Test</span>
+    <h3 style="margin:0 0 4px">Test WhatsApp Price Lookup</h3>
+    <p style="color:#555;font-size:14px">Simulate a farmer texting a number to get prices</p>
+    <label>Message (e.g. 1 for Rice, 2 for Cassava... 15 for Meat)</label>
+    <input id="wa-msg" type="text" placeholder="Type 1-15 or JOIN or STOP" value="1">
+    <button onclick="testWhatsapp()">Simulate WhatsApp Message</button>
+    <div class="result" id="wa-result"></div>
+  </div>
+
+  <script>
+    const KEY = 'saloneprices2024';
+
+    async function callApi(method, url, body, resultId) {
+      const el = document.getElementById(resultId);
+      el.style.display = 'block';
+      el.textContent = 'Loading...';
+      try {
+        const opts = {
+          method,
+          headers: { 'X-Admin-Key': KEY, 'Content-Type': 'application/json' }
+        };
+        if (body) opts.body = JSON.stringify(body);
+        const res = await fetch(url, opts);
+        const data = await res.json();
+        el.textContent = JSON.stringify(data, null, 2);
+      } catch(e) {
+        el.textContent = 'Error: ' + e.message;
+      }
+    }
+
+    async function testWhatsapp() {
+      const msg = document.getElementById('wa-msg').value;
+      const el = document.getElementById('wa-result');
+      el.style.display = 'block';
+      el.textContent = 'Loading...';
+      try {
+        const res = await fetch('/whatsapp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ from: '+23276000001', text: msg })
+        });
+        const data = await res.json();
+        el.textContent = data.message || JSON.stringify(data, null, 2);
+      } catch(e) {
+        el.textContent = 'Error: ' + e.message;
+      }
+    }
+  </script>
+</body>
+</html>"""
+    return html, 200, {"Content-Type": "text/html"}
+
+
 # ── Health check ──────────────────────────────────────────────────────────────
 
 @app.route("/health", methods=["GET"])
