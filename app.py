@@ -140,6 +140,30 @@ def admin_trigger_blast():
     })
 
 
+# ── Public test page ─────────────────────────────────────────────────────────
+
+@app.route("/test", methods=["GET"])
+def test_page():
+    """Public test page — shows a sample SMS and subscriber count."""
+    try:
+        from sheets import get_latest_prices, get_active_subscribers
+        prices = get_latest_prices()
+        subs = get_active_subscribers()
+        sample_msg = format_price_sms(prices, ["rice", "cassava", "palm_oil"])
+        return jsonify({
+            "status": "live",
+            "service": "SalonePrices 🌾",
+            "active_subscribers": len(subs),
+            "crops_loaded": list(prices.keys()),
+            "sample_sms": sample_msg,
+            "ussd_code": "*384*3844321#",
+            "whatsapp": "SalonePrices Business",
+            "github": "https://github.com/rdmcsl/salone-prices"
+        })
+    except Exception as e:
+        return jsonify({"status": "ok", "note": str(e)}), 200
+
+
 # ── Health check ──────────────────────────────────────────────────────────────
 
 @app.route("/health", methods=["GET"])
