@@ -50,7 +50,18 @@ def _get_client() -> gspread.Client:
     from config import GOOGLE_CREDS_CONTENT
     if GOOGLE_CREDS_CONTENT:
         # Load from environment variable (Railway production)
-        info = _json.loads(GOOGLE_CREDS_CONTENT)
+        # Fix escaped newlines in private key if needed
+        creds_str = GOOGLE_CREDS_CONTENT.strip()
+        try:
+            info = _json.loads(creds_str)
+        except _json.JSONDecodeError:
+            # Try fixing common issues with escaped characters
+            creds_str = creds_str.replace("\\n", "\n")
+            info = _json.loads(creds_str)
+        # Ensure private key newlines are correct
+        if "private_key" in info:
+            info["private_key"] = info["private_key"].replace("\n", "
+")
         creds = Credentials.from_service_account_info(info, scopes=SCOPES)
     else:
         # Load from file (local development)
