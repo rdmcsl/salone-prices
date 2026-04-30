@@ -202,6 +202,7 @@ def _build_whatsapp_reply(message: str, prices: dict) -> str:
         "4": "groundnut", "5": "tomato", "6": "maize",
         "7": "fish_bonga", "8": "onion", "9": "cooking_oil",
         "10": "salt", "11": "pepper", "12": "sweet_potato",
+        "13": "eggs", "14": "chicken", "15": "meat",
     }
 
     # JOIN → subscribe
@@ -265,8 +266,9 @@ def _build_whatsapp_reply(message: str, prices: dict) -> str:
 
     # Default → show menu
     return (
-        "\U0001f33e *Welcome to SalonePrices!*\n\n"
-        "Text a number for today\'s market prices:\n\n"
+        "\U0001f33e *Welcome to SalonePrices!*\n"
+        "Na wi yone free price service for Salone \U0001f1f8\U0001f1f1\n\n"
+        "Text a number for TODAY\'s market prices:\n\n"
         "1 - \U0001f35a Rice\n"
         "2 - \U0001f33f Cassava\n"
         "3 - \U0001f6ab Palm Oil\n"
@@ -278,8 +280,11 @@ def _build_whatsapp_reply(message: str, prices: dict) -> str:
         "9 - \U0001f6ab Cooking Oil\n"
         "10 - \U0001fab8 Salt\n"
         "11 - \U0001f336 Pepper\n"
-        "12 - \U0001f360 Sweet Potato\n\n"
-        "Type JOIN for weekly Monday alerts \U0001f4f2"
+        "12 - \U0001f360 Sweet Potato\n"
+        "13 - \U0001f95a Eggs (per crate)\n"
+        "14 - \U0001f414 Chicken (per kg)\n"
+        "15 - \U0001f969 Meat / Beef (per kg)\n\n"
+        "Type WEEKLY for Monday morning alerts \U0001f4f2"
     )
 
 
