@@ -57,7 +57,7 @@ CROPS = {
     "onion":       {"name": "Onion",       "unit": "kg",    "emoji": "🧅", "sheet_tab": "Onion"},
     "cooking_oil": {"name": "Cooking Oil", "unit": "litre", "emoji": "🫚", "sheet_tab": "CookingOil"},
     "salt":        {"name": "Salt",        "unit": "kg",    "emoji": "🪨", "sheet_tab": "Salt"},
-    "pepper":      {"name": "Pepper",      "unit": "kg",    "emoji": "🌶️", "sheet_tab": "Pepper"},
+    "pepper":      {"name": "Pepper",      "unit": "kg",    "emoji": "\U0001F336", "sheet_tab": "Pepper"},
     "sweet_potato":{"name": "Sweet Potato","unit": "kg",    "emoji": "🍠", "sheet_tab": "SweetPotato"},
 }
 
