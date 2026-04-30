@@ -146,13 +146,16 @@ def admin_trigger_blast():
 def debug_env():
     """Temporary debug endpoint - remove after fixing."""
     import os
+    from config import PRICES_SHEET_ID, SUBSCRIBERS_SHEET_ID, AT_USERNAME, GOOGLE_CREDS_CONTENT
     creds = os.getenv("GOOGLE_CREDS_CONTENT", "")
     return jsonify({
+        "env_PRICES_SHEET_ID": os.getenv("PRICES_SHEET_ID", "NOT IN ENV"),
+        "config_PRICES_SHEET_ID": PRICES_SHEET_ID,
+        "env_AT_USERNAME": os.getenv("AT_USERNAME", "NOT IN ENV"),
+        "config_AT_USERNAME": AT_USERNAME,
         "GOOGLE_CREDS_CONTENT_length": len(creds),
-        "GOOGLE_CREDS_CONTENT_first10": creds[:10] if creds else "EMPTY",
-        "GOOGLE_CREDS_CONTENT_last10": creds[-10:] if creds else "EMPTY",
-        "PRICES_SHEET_ID": os.getenv("PRICES_SHEET_ID", "NOT SET"),
-        "AT_USERNAME": os.getenv("AT_USERNAME", "NOT SET"),
+        "config_GOOGLE_CREDS_CONTENT_length": len(GOOGLE_CREDS_CONTENT),
+        "all_env_keys": [k for k in os.environ.keys() if "SALONE" in k or "GOOGLE" in k or "AT_" in k or "PRICES" in k],
     })
 
 
