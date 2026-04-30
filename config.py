@@ -23,7 +23,7 @@ ORANGE_COUNTRY_CODE  = "SL"
 ORANGE_CURRENCY      = "SLE"  # new Leone
 
 # ── Google Sheets ────────────────────────────────────────────────────────────
-GOOGLE_CREDS_JSON    = os.getenv("GOOGLE_CREDS_JSON", "google_credentials.json")
+GOOGLE_CREDS_JSON    = os.getenv("GOOGLE_CREDS_JSON", "google_credentials.json")  # relative path works on Railway
 PRICES_SHEET_ID      = os.getenv("PRICES_SHEET_ID", "")   # your Google Sheet ID from the URL
 SUBSCRIBERS_SHEET_ID = os.getenv("SUBSCRIBERS_SHEET_ID", "")  # can be same sheet, different tab
 
