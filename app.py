@@ -159,6 +159,130 @@ def debug_env():
     })
 
 
+# ── WhatsApp inbound message handler ─────────────────────────────────────────
+
+@app.route("/whatsapp", methods=["POST"])
+def whatsapp_inbound():
+    """
+    Handles inbound WhatsApp messages from Africa's Talking.
+    Farmers text a number (1-12) to get instant crop prices.
+    """
+    data = request.get_json(silent=True) or request.form.to_dict()
+    phone = data.get("from", data.get("phoneNumber", ""))
+    message = data.get("text", data.get("message", "")).strip().lower()
+
+    logger.info("WhatsApp from %s: %s", phone, message)
+
+    try:
+        from sheets import get_latest_prices
+        prices = get_latest_prices()
+    except Exception as e:
+        logger.error("Could not load prices: %s", e)
+        prices = {}
+
+    reply = _build_whatsapp_reply(message, prices)
+    return jsonify({"message": reply}), 200
+
+
+def _build_whatsapp_reply(message: str, prices: dict) -> str:
+    """Build instant price reply based on farmer's message."""
+    from config import CROPS, MARKETS
+
+    market_names = {
+        "freetown": "Freetown",
+        "bo": "Bo",
+        "kenema": "Kenema",
+        "makeni": "Makeni",
+        "koidu": "Koidu",
+    }
+
+    # Map number to crop
+    crop_menu = {
+        "1": "rice", "2": "cassava", "3": "palm_oil",
+        "4": "groundnut", "5": "tomato", "6": "maize",
+        "7": "fish_bonga", "8": "onion", "9": "cooking_oil",
+        "10": "salt", "11": "pepper", "12": "sweet_potato",
+    }
+
+    # JOIN → subscribe
+    if message in ["join", "subscribe"]:
+        return (
+            "✅ You don\u2019t need to sign up for instant prices!\n\n"
+            "Just text a number anytime:\n"
+            "1-Rice 2-Cassava 3-Palm Oil\n"
+            "4-Groundnut 5-Tomato 6-Maize\n"
+            "7-Bonga Fish 8-Onion 9-Cooking Oil\n"
+            "10-Salt 11-Pepper 12-Sweet Potato\n\n"
+            "For weekly Monday alerts, reply WEEKLY."
+        )
+
+    # STOP → unsubscribe
+    if message in ["stop", "unsubscribe"]:
+        return "You\u2019ve been unsubscribed from weekly alerts. Text any number 1-12 for instant prices anytime."
+
+    # WEEKLY → subscribe to Monday blast
+    if message == "weekly":
+        return (
+            "\U0001f4f2 To get weekly Monday price alerts, dial *384*3844321# "
+            "on your phone and select option 1 to subscribe. It\u2019s free for 4 weeks!"
+        )
+
+    # Number → instant price
+    if message in crop_menu:
+        crop_key = crop_menu[message]
+        crop_info = CROPS.get(crop_key, {})
+        crop_name = crop_info.get("name", crop_key)
+        unit = crop_info.get("unit", "kg")
+        emoji = crop_info.get("emoji", "\U0001f33e")
+        crop_prices = prices.get(crop_key, {})
+
+        if not crop_prices:
+            return f"Sorry, no prices available for {crop_name} today. Check back Monday!"
+
+        from datetime import date
+        today = date.today().strftime("%-d %b %Y")
+
+        lines = [f"{emoji} *{crop_name} prices — {today}*", ""]
+        best_market = ""
+        best_price = 0
+
+        for market, price in sorted(crop_prices.items(), key=lambda x: -x[1]):
+            mname = market_names.get(market, market.title())
+            lines.append(f"📍 {mname}: *NLE {price:,}/{unit}*")
+            if price > best_price:
+                best_price = price
+                best_market = mname
+
+        if best_market:
+            lines.append("")
+            lines.append(f"\U0001f4a1 Best price: Sell in *{best_market}* this week!")
+
+        lines.append("")
+        lines.append("Text another number for more prices.")
+        lines.append("1-Rice 2-Cassava 3-Palm Oil 4-Groundnut 5-Tomato 6-Maize 7-Fish 8-Onion 9-Oil 10-Salt 11-Pepper 12-Sweet Potato")
+
+        return "\n".join(lines)
+
+    # Default → show menu
+    return (
+        "\U0001f33e *Welcome to SalonePrices!*\n\n"
+        "Text a number for today\'s market prices:\n\n"
+        "1 - \U0001f35a Rice\n"
+        "2 - \U0001f33f Cassava\n"
+        "3 - \U0001f6ab Palm Oil\n"
+        "4 - \U0001f95c Groundnut\n"
+        "5 - \U0001f345 Tomato\n"
+        "6 - \U0001f33d Maize\n"
+        "7 - \U0001f41f Bonga Fish\n"
+        "8 - \U0001f9c5 Onion\n"
+        "9 - \U0001f6ab Cooking Oil\n"
+        "10 - \U0001fab8 Salt\n"
+        "11 - \U0001f336 Pepper\n"
+        "12 - \U0001f360 Sweet Potato\n\n"
+        "Type JOIN for weekly Monday alerts \U0001f4f2"
+    )
+
+
 # ── Public test page ─────────────────────────────────────────────────────────
 
 @app.route("/test", methods=["GET"])

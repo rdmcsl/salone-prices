@@ -69,10 +69,18 @@ def _get_client() -> gspread.Client:
 
 
 # ── Prices ───────────────────────────────────────────────────────────────────
+#
+# Simple sheet format (single "Prices" tab):
+# | crop | freetown | bo | kenema | makeni | koidu | date |
+# One row per crop — just update numbers each week!
+#
 
 def get_latest_prices(crops: Optional[list] = None) -> dict:
     """
-    Returns the most recent price for each (crop, market) pair.
+    Reads from a single "Prices" tab with this simple format:
+    | crop | freetown | bo | kenema | makeni | koidu | date |
+
+    One row per crop. Just update the numbers each week!
 
     Returns:
         {
@@ -83,22 +91,42 @@ def get_latest_prices(crops: Optional[list] = None) -> dict:
     """
     client = _get_client()
     sheet = client.open_by_key(PRICES_SHEET_ID)
-    crop_keys = crops or list(CROPS.keys())
     prices: dict = {}
 
+    # Try new simple format first (single Prices tab)
+    try:
+        ws = sheet.worksheet("Prices")
+        rows = ws.get_all_records()
+        for row in rows:
+            crop_key = str(row.get("crop", "")).lower().strip().replace(" ", "_")
+            if not crop_key:
+                continue
+            crop_prices = {}
+            for market in ["freetown", "bo", "kenema", "makeni", "koidu"]:
+                val = row.get(market) or row.get(market.title())
+                if val:
+                    try:
+                        crop_prices[market] = int(float(str(val).replace(",", "")))
+                    except (ValueError, TypeError):
+                        pass
+            if crop_prices:
+                prices[crop_key] = crop_prices
+        logger.info("Loaded prices from Prices tab: %d crops", len(prices))
+        return prices
+    except gspread.WorksheetNotFound:
+        pass  # Fall back to old per-crop tab format
+
+    # Fallback: old format (one tab per crop)
+    crop_keys = crops or list(CROPS.keys())
     for crop_key in crop_keys:
         tab_name = CROPS[crop_key]["sheet_tab"]
         try:
             ws = sheet.worksheet(tab_name)
         except gspread.WorksheetNotFound:
-            logger.warning("Sheet tab not found: %s", tab_name)
             continue
-
-        rows = ws.get_all_records()  # list of dicts keyed by header row
+        rows = ws.get_all_records()
         if not rows:
             continue
-
-        # Sort by date descending, keep latest price per market
         rows_sorted = sorted(rows, key=lambda r: r.get("date", ""), reverse=True)
         crop_prices: dict = {}
         for row in rows_sorted:
@@ -109,12 +137,10 @@ def get_latest_prices(crops: Optional[list] = None) -> dict:
                     crop_prices[market] = int(float(price))
                 except (ValueError, TypeError):
                     pass
-            if len(crop_prices) == len(MARKETS):
-                break
+        if crop_prices:
+            prices[crop_key] = crop_prices
 
-        prices[crop_key] = crop_prices
-
-    logger.info("Loaded prices for %d crops", len(prices))
+    logger.info("Loaded prices for %d crops (legacy tabs)", len(prices))
     return prices
 
 
