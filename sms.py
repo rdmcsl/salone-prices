@@ -64,8 +64,10 @@ def format_price_sms(prices: dict, subscriber_crops: list[str]) -> str:
     for crop_key in subscriber_crops:
         if crop_key not in prices:
             continue
-        crop_name = CROPS[crop_key]["name"].upper()
-        unit = CROPS[crop_key]["unit"]
+        crop_info   = CROPS[crop_key]
+        crop_name   = crop_info["name"].upper()
+        unit        = crop_info["unit"]
+        emoji       = crop_info.get("emoji", "")
         crop_prices = prices[crop_key]
         if not crop_prices:
             continue
@@ -76,13 +78,13 @@ def format_price_sms(prices: dict, subscriber_crops: list[str]) -> str:
             parts.append(f"{abbrev} {price:,}")
             if price > best_price:
                 best_price = price
-                best_crop = CROPS[crop_key]["name"]
+                best_crop = crop_info["name"]
                 best_market_name = MARKETS.get(mkt, {}).get("name", mkt.title())
 
-        lines.append(f"{crop_name}/{unit}: " + " | ".join(parts))
+        lines.append(f"{emoji} {crop_name}/{unit}: " + " | ".join(parts))
 
     if best_crop and best_market_name:
-        lines.append(f"Best: sell {best_crop} in {best_market_name}.")
+        lines.append(f"💡 Best: sell {best_crop} in {best_market_name}!")
 
     lines.append("Txt STOP to unsub")
 

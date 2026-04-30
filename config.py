@@ -45,12 +45,18 @@ MARKETS = {
 
 # ── Crops tracked ────────────────────────────────────────────────────────────
 CROPS = {
-    "rice":      {"name": "Rice",      "unit": "kg",   "sheet_tab": "Rice"},
-    "cassava":   {"name": "Cassava",   "unit": "kg",   "sheet_tab": "Cassava"},
-    "palm_oil":  {"name": "Palm oil",  "unit": "litre","sheet_tab": "PalmOil"},
-    "cocoa":     {"name": "Cocoa",     "unit": "kg",   "sheet_tab": "Cocoa"},
-    "groundnut": {"name": "Groundnut", "unit": "kg",   "sheet_tab": "Groundnut"},
-    "tomato":    {"name": "Tomato",    "unit": "kg",   "sheet_tab": "Tomato"},
+    "rice":        {"name": "Rice",        "unit": "kg",    "emoji": "🍚", "sheet_tab": "Rice"},
+    "cassava":     {"name": "Cassava",     "unit": "kg",    "emoji": "🌿", "sheet_tab": "Cassava"},
+    "palm_oil":    {"name": "Palm Oil",    "unit": "litre", "emoji": "🫙", "sheet_tab": "PalmOil"},
+    "groundnut":   {"name": "Groundnut",   "unit": "kg",    "emoji": "🥜", "sheet_tab": "Groundnut"},
+    "tomato":      {"name": "Tomato",      "unit": "kg",    "emoji": "🍅", "sheet_tab": "Tomato"},
+    "maize":       {"name": "Maize",       "unit": "kg",    "emoji": "🌽", "sheet_tab": "Maize"},
+    "fish_bonga":  {"name": "Bonga Fish",  "unit": "kg",    "emoji": "🐟", "sheet_tab": "FishBonga"},
+    "onion":       {"name": "Onion",       "unit": "kg",    "emoji": "🧅", "sheet_tab": "Onion"},
+    "cooking_oil": {"name": "Cooking Oil", "unit": "litre", "emoji": "🫚", "sheet_tab": "CookingOil"},
+    "salt":        {"name": "Salt",        "unit": "kg",    "emoji": "🪨", "sheet_tab": "Salt"},
+    "pepper":      {"name": "Pepper",      "unit": "kg",    "emoji": "🌶️", "sheet_tab": "Pepper"},
+    "sweet_potato":{"name": "Sweet Potato","unit": "kg",    "emoji": "🍠", "sheet_tab": "SweetPotato"},
 }
 
 # ── Districts (for USSD registration) ────────────────────────────────────────
