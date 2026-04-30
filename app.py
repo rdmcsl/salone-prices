@@ -140,6 +140,22 @@ def admin_trigger_blast():
     })
 
 
+# ── Debug endpoint ───────────────────────────────────────────────────────────
+
+@app.route("/debug", methods=["GET"])
+def debug_env():
+    """Temporary debug endpoint - remove after fixing."""
+    import os
+    creds = os.getenv("GOOGLE_CREDS_CONTENT", "")
+    return jsonify({
+        "GOOGLE_CREDS_CONTENT_length": len(creds),
+        "GOOGLE_CREDS_CONTENT_first10": creds[:10] if creds else "EMPTY",
+        "GOOGLE_CREDS_CONTENT_last10": creds[-10:] if creds else "EMPTY",
+        "PRICES_SHEET_ID": os.getenv("PRICES_SHEET_ID", "NOT SET"),
+        "AT_USERNAME": os.getenv("AT_USERNAME", "NOT SET"),
+    })
+
+
 # ── Public test page ─────────────────────────────────────────────────────────
 
 @app.route("/test", methods=["GET"])
