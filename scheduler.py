@@ -42,11 +42,22 @@ FREETOWN_TZ = pytz.timezone("Africa/Freetown")  # UTC+0 (no DST)
 
 def job_weekly_blast():
     """
-    Fetches latest prices from Google Sheets and sends personalised
-    weekly SMS alerts to all active/trial subscribers.
-    Runs every Monday at 07:00 Freetown time.
+    Every Monday at 06:00: auto-fetch WFP prices → update Google Sheet
+    Every Monday at 07:00: read sheet → send SMS blast to all subscribers
     """
-    logger.info("=== Weekly blast starting ===")
+    logger.info("=== Step 1: Auto-fetching WFP prices ===")
+    try:
+        from price_fetcher import fetch_wfp_prices, update_sheet_with_wfp_prices
+        wfp_prices = fetch_wfp_prices()
+        if wfp_prices and "_meta" in wfp_prices:
+            updated = update_sheet_with_wfp_prices(wfp_prices)
+            logger.info("WFP prices written to sheet: %s", updated)
+        else:
+            logger.warning("No WFP prices fetched — using existing sheet data")
+    except Exception as e:
+        logger.warning("WFP fetch failed (will use existing sheet data): %s", e)
+
+    logger.info("=== Step 2: Weekly SMS blast ===")
     try:
         prices  = get_latest_prices()
         results = run_weekly_blast(prices)

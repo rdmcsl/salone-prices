@@ -129,6 +129,28 @@ def admin_blast_preview():
     return jsonify({"previews": previews, "total_active": len(get_active_subscribers())})
 
 
+@app.route("/admin/fetch-prices", methods=["POST"])
+@_require_admin
+def admin_fetch_prices():
+    """Manually trigger WFP price fetch and update Google Sheet."""
+    try:
+        from price_fetcher import fetch_wfp_prices, update_sheet_with_wfp_prices
+        prices = fetch_wfp_prices()
+        meta   = prices.pop("_meta", {})
+        if prices:
+            update_sheet_with_wfp_prices({**prices, "_meta": meta})
+            return jsonify({
+                "status": "ok",
+                "commodities_fetched": list(prices.keys()),
+                "source": meta.get("source"),
+                "date": meta.get("date"),
+            })
+        else:
+            return jsonify({"status": "no_data", "note": "WFP had no recent SL data — sheet unchanged"})
+    except Exception as e:
+        return jsonify({"status": "error", "reason": str(e)}), 500
+
+
 @app.route("/admin/trigger-blast", methods=["POST"])
 @_require_admin
 def admin_trigger_blast():
