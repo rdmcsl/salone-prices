@@ -7,3 +7,4 @@ logs/
 .DS_Store
 # Note: google_credentials.json IS committed so Railway can access it
 # Rotate credentials if ever compromised
+google_credentials.json

@@ -46,7 +46,15 @@ SCOPES = [
 
 
 def _get_client() -> gspread.Client:
-    creds = Credentials.from_service_account_file(GOOGLE_CREDS_JSON, scopes=SCOPES)
+    import json as _json
+    from config import GOOGLE_CREDS_CONTENT
+    if GOOGLE_CREDS_CONTENT:
+        # Load from environment variable (Railway production)
+        info = _json.loads(GOOGLE_CREDS_CONTENT)
+        creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+    else:
+        # Load from file (local development)
+        creds = Credentials.from_service_account_file(GOOGLE_CREDS_JSON, scopes=SCOPES)
     return gspread.authorize(creds)
 
 
