@@ -436,6 +436,16 @@ def admin_panel():
   </div>
 
   <div class="card">
+    <span class="badge">Send Test SMS</span>
+    <h3 style="margin:0 0 4px">Send Test SMS to a Phone</h3>
+    <p style="color:#555;font-size:14px">Send a real SMS to any number to test the system</p>
+    <label>Phone number (include country code e.g. +13177241951)</label>
+    <input id="test-phone" type="text" placeholder="+13177241951" value="+13177241951">
+    <button onclick="sendTestSMS()">Send Test SMS Now</button>
+    <div class="result" id="sms-test-result"></div>
+  </div>
+
+  <div class="card">
     <span class="badge">WhatsApp Test</span>
     <h3 style="margin:0 0 4px">Test WhatsApp Price Lookup</h3>
     <p style="color:#555;font-size:14px">Simulate a farmer texting a number to get prices</p>
@@ -459,6 +469,24 @@ def admin_panel():
         };
         if (body) opts.body = JSON.stringify(body);
         const res = await fetch(url, opts);
+        const data = await res.json();
+        el.textContent = JSON.stringify(data, null, 2);
+      } catch(e) {
+        el.textContent = 'Error: ' + e.message;
+      }
+    }
+
+    async function sendTestSMS() {
+      const phone = document.getElementById('test-phone').value;
+      const el = document.getElementById('sms-test-result');
+      el.style.display = 'block';
+      el.textContent = 'Sending...';
+      try {
+        const res = await fetch('/admin/send-test-sms', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({phone: phone})
+        });
         const data = await res.json();
         el.textContent = JSON.stringify(data, null, 2);
       } catch(e) {
