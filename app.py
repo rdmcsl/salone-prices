@@ -498,19 +498,7 @@ def send_test_sms():
     phone = data.get("phone", "")
     if not phone:
         return jsonify({"error": "phone required"}), 400
-    msg = (
-        "🌾 SalonePrices Test!
-"
-        "Text a number for Sierra Leone market prices:
-"
-        "1=Rice 2=Cassava 3=PalmOil 4=Groundnut
-"
-        "5=Tomato 6=Maize 7=Fish 8=Onion
-"
-        "9=Oil 10=Salt 11=Pepper 12=SweetPotato
-"
-        "13=Eggs 14=Chicken 15=Meat"
-    )
+    msg = "SalonePrices Test! Text a number for SL market prices: 1=Rice 2=Cassava 3=PalmOil 4=Groundnut 5=Tomato 6=Maize 7=Fish 8=Onion 9=Oil 10=Salt 11=Pepper 12=SweetPotato 13=Eggs 14=Chicken 15=Meat"
     result = send_sms(phone, msg)
     return jsonify({"result": result, "phone": phone})
 
