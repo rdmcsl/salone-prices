@@ -30,9 +30,9 @@ PRICES_SHEET_ID      = os.getenv("PRICES_SHEET_ID", "1K7vaC5oT9cujtzpHTal9bBnll8
 SUBSCRIBERS_SHEET_ID = os.getenv("SUBSCRIBERS_SHEET_ID", "1K7vaC5oT9cujtzpHTal9bBnll85y8sZ-f0f5qnnvlZQ")
 
 # ── Twilio (for sending SMS globally during testing) ─────────────────────────
-TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "ACf4a122b66ac0a014d516453eeac070c8")
-TWILIO_AUTH_TOKEN  = os.getenv("TWILIO_AUTH_TOKEN",  "c076c924bf13dab6ef9ecf5f0908620c")
-TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER", "+12295623289")
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN  = os.getenv("TWILIO_AUTH_TOKEN",  "")
+TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER", "")
 
 # ── App settings ─────────────────────────────────────────────────────────────
 SUBSCRIPTION_FEE_NLE = 5_000        # NLE per month per individual farmer
