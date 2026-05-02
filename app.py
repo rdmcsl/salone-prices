@@ -526,19 +526,32 @@ def admin_panel():
 
 @app.route("/admin/send-test-sms", methods=["POST"])
 def send_test_sms():
-    """Send a test SMS to any number to verify AT is working."""
+    """Send a test SMS via Twilio to any number worldwide."""
     try:
+        from twilio.rest import Client
+        from config import TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
+
         data  = request.get_json(silent=True) or {}
         phone = data.get("phone", "")
         if not phone:
             return jsonify({"error": "phone required"}), 400
-        msg = "SalonePrices Test! Text a number for SL market prices: 1=Rice 2=Cassava 3=PalmOil 4=Groundnut 5=Tomato 6=Maize 7=Fish 8=Onion 9=Oil 10=Salt 11=Pepper 12=SweetPotato 13=Eggs 14=Chicken 15=Meat"
-        result = send_sms(phone, msg)
-        return jsonify({"status": "sent", "result": str(result), "phone": phone,
-                        "note": "Sandbox only delivers to SL numbers. Upgrade AT to live to send globally."})
+
+        msg = "SalonePrices SL! Text a number for prices: 1=Rice 2=Cassava 3=PalmOil 4=Groundnut 5=Tomato 6=Maize 7=Fish 8=Onion 9=Oil 10=Salt 11=Pepper 12=SweetPotato 13=Eggs 14=Chicken 15=Meat. Reply now!"
+
+        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        message = client.messages.create(
+            body=msg,
+            from_=TWILIO_FROM_NUMBER,
+            to=phone
+        )
+        return jsonify({
+            "status": "sent",
+            "message_sid": message.sid,
+            "to": phone,
+            "from": TWILIO_FROM_NUMBER
+        })
     except Exception as e:
-        return jsonify({"status": "error", "reason": str(e),
-                        "note": "AT sandbox cannot send to US numbers. Add $5 credit and switch to live mode to send globally."})
+        return jsonify({"status": "error", "reason": str(e)})
 
 
 # ── Health check ──────────────────────────────────────────────────────────────
