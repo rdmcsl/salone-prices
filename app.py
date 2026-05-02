@@ -480,15 +480,20 @@ def admin_panel():
       const phone = document.getElementById('test-phone').value;
       const el = document.getElementById('sms-test-result');
       el.style.display = 'block';
-      el.textContent = 'Sending...';
+      el.textContent = 'Sending to ' + phone + '...';
       try {
         const res = await fetch('/admin/send-test-sms', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
           body: JSON.stringify({phone: phone})
         });
-        const data = await res.json();
-        el.textContent = JSON.stringify(data, null, 2);
+        const text = await res.text();
+        try {
+          const data = JSON.parse(text);
+          el.textContent = JSON.stringify(data, null, 2);
+        } catch(e) {
+          el.textContent = 'Response: ' + text.substring(0, 200);
+        }
       } catch(e) {
         el.textContent = 'Error: ' + e.message;
       }
