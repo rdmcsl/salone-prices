@@ -178,6 +178,45 @@ def debug_env():
     })
 
 
+# ── SMS inbound handler (Africa's Talking SMS callback) ──────────────────────
+
+@app.route("/sms-inbound", methods=["POST"])
+def sms_inbound():
+    """
+    Handles inbound SMS from Africa's Talking.
+    Farmers text a number (1-15) to get instant crop prices by SMS.
+    AT posts: from, to, text, date
+    """
+    data    = request.form.to_dict() or request.get_json(silent=True) or {}
+    phone   = data.get("from", data.get("phoneNumber", ""))
+    message = data.get("text", data.get("message", "")).strip().lower()
+
+    logger.info("SMS inbound from %s: %s", phone, message)
+
+    try:
+        from sheets import get_latest_prices
+        prices = get_latest_prices()
+    except Exception as e:
+        logger.error("Could not load prices: %s", e)
+        prices = {}
+
+    reply = _build_whatsapp_reply(message, prices)
+
+    # Strip emoji for SMS (SMS doesn't support all emoji)
+    import re
+    reply_sms = re.sub(r'[*_]', '', reply)  # remove markdown bold
+    reply_sms = reply_sms[:459]  # SMS safe length (3 SMS max)
+
+    # Send reply SMS via Africa's Talking
+    try:
+        send_sms(phone, reply_sms[:160])
+        logger.info("SMS reply sent to %s", phone)
+    except Exception as e:
+        logger.error("SMS reply failed: %s", e)
+
+    return "OK", 200
+
+
 # ── WhatsApp inbound message handler ─────────────────────────────────────────
 
 @app.route("/whatsapp", methods=["POST"])
