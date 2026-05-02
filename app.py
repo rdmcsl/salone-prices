@@ -530,6 +530,14 @@ def send_test_sms():
     try:
         from twilio.rest import Client
         from config import TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
+        import os
+        # Use env directly as fallback
+        sid   = os.getenv("TWILIO_ACCOUNT_SID") or TWILIO_ACCOUNT_SID or "ACf4a122b66ac0a014d516453eeac070c8"
+        token = os.getenv("TWILIO_AUTH_TOKEN")  or TWILIO_AUTH_TOKEN  or "c076c924bf13dab6ef9ecf5f0908620c"
+        frm   = os.getenv("TWILIO_FROM_NUMBER") or TWILIO_FROM_NUMBER or "+12295623289"
+        TWILIO_ACCOUNT_SID = sid
+        TWILIO_AUTH_TOKEN  = token
+        TWILIO_FROM_NUMBER = frm
 
         data  = request.get_json(silent=True) or {}
         phone = data.get("phone", "")
