@@ -1,5 +1,5 @@
 """
-SalonePrices – Automated price fetcher
+SaloneMarket – Automated price fetcher
 
 Pulls Sierra Leone food prices from 2 free sources every Monday:
 
@@ -111,7 +111,7 @@ def _fetch_from_hdx_csv() -> dict:
     """Download and parse the WFP Sierra Leone food prices CSV from HDX."""
     try:
         headers = {
-            "User-Agent": "SalonePrices/1.0 (salone-prices@saloneprices.iam.gserviceaccount.com)"
+            "User-Agent": "SaloneMarket/1.0 (salonemarket@saloneprices.iam.gserviceaccount.com)"
         }
         resp = requests.get(HDX_CSV_URL, headers=headers, timeout=30)
         resp.raise_for_status()

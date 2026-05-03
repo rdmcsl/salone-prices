@@ -1,5 +1,5 @@
 """
-SalonePrices – Google Sheets data layer
+SaloneMarket – Google Sheets data layer
 
 Handles:
   - Reading crop prices from the prices sheet

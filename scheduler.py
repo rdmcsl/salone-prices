@@ -1,5 +1,5 @@
 """
-SalonePrices – Scheduler
+SaloneMarket – Scheduler
 
 Runs the weekly price blast every Monday at 07:00 Freetown time (UTC+0).
 
@@ -118,7 +118,7 @@ def job_renewal_reminders():
                 plan  = sub.get("plan", "individual")
                 fee   = "NLE 500,000" if plan == "association" else "NLE 5,000"
                 msg   = (
-                    f"SalonePrices: Your subscription expires in {days_left} days, {name}. "
+                    f"SaloneMarket: Your subscription expires in {days_left} days, {name}. "
                     f"Renew for {fee}/month by dialling *384*4321#."
                 )[:160]
                 send_sms(phone, msg)
@@ -177,7 +177,7 @@ if __name__ == "__main__":
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s – %(message)s",
     )
-    logger.info("SalonePrices scheduler starting…")
+    logger.info("SaloneMarket scheduler starting…")
     scheduler = create_scheduler()
     scheduler.start()
 

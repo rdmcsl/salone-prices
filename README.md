@@ -1,4 +1,4 @@
-# SalonePrices 🌾
+# SaloneMarket 🌾
 
 **Automated crop price SMS alert service for Sierra Leone.**
 Weekly price alerts sent directly to farmers' phones. No smartphone required.
@@ -7,7 +7,7 @@ Weekly price alerts sent directly to farmers' phones. No smartphone required.
 
 ## What this does
 
-Every Monday at 7am, SalonePrices:
+Every Monday at 7am, SaloneMarket:
 1. Reads crop prices from your Google Sheet (populated by your market informants)
 2. Formats a personalised 160-char SMS per subscriber showing prices for their chosen crops
 3. Sends the SMS via Africa's Talking to every active/trial subscriber
@@ -20,7 +20,7 @@ Farmers subscribe by dialling `*384*4321#` on any phone. Payment is collected vi
 ## Project structure
 
 ```
-salone_prices/
+salonemarket/
 ├── app.py          # Flask web server (USSD callback, payment webhook, admin)
 ├── config.py       # All settings (API keys loaded from .env)
 ├── payments.py     # Orange Money webhook handler
@@ -32,7 +32,7 @@ salone_prices/
 ├── railway.toml    # Railway.app deployment
 ├── .env.example    # Copy to .env and fill in
 └── tests/
-    └── test_salone_prices.py
+    └── test_salonemarket.py
 ```
 
 ---
@@ -42,8 +42,8 @@ salone_prices/
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/yourname/salone-prices.git
-cd salone-prices
+git clone https://github.com/yourname/salonemarket.git
+cd salonemarket
 pip install -r requirements.txt
 cp .env.example .env
 ```
@@ -65,7 +65,7 @@ cp .env.example .env
 1. Sign up at [africastalking.com](https://africastalking.com)
 2. Create an application → get your API key and username
 3. Register a USSD code (e.g. `*384*4321#`) → set callback URL to `https://yourdomain.com/ussd`
-4. Register a Sender ID `SalonePrices` (requires AT approval, takes 1-3 days)
+4. Register a Sender ID `SaloneMarket` (requires AT approval, takes 1-3 days)
 5. Add credentials to `.env`
 
 ### 4. Orange Money setup
@@ -160,7 +160,7 @@ Link it to the same Sheet. Zero data entry for you.
 |----------|-------------|
 | `AT_API_KEY` | Africa's Talking API key |
 | `AT_USERNAME` | Africa's Talking username |
-| `AT_SENDER_ID` | Approved sender ID (default: `SalonePrices`) |
+| `AT_SENDER_ID` | Approved sender ID (default: `SaloneMarket`) |
 | `ORANGE_CLIENT_ID` | Orange Money client ID |
 | `ORANGE_CLIENT_SECRET` | Orange Money secret (used for webhook HMAC) |
 | `ORANGE_MERCHANT_KEY` | Orange Money merchant key |

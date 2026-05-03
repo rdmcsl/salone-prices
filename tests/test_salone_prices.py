@@ -1,9 +1,9 @@
 """
-SalonePrices – Test suite
+SaloneMarket – Test suite
 
 Run with:
     pip install pytest
-    pytest tests/test_salone_prices.py -v
+    pytest tests/test_salonemarket.py -v
 
 Tests are designed to run without real API credentials by mocking
 external calls (Africa's Talking, Google Sheets, Orange Money).

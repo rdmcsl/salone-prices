@@ -1,5 +1,5 @@
 """
-SalonePrices – Google Sheets bootstrapper
+SaloneMarket – Google Sheets bootstrapper
 
 Run this ONCE to create the correct sheet structure in your Google Sheet.
 After running, you'll have:

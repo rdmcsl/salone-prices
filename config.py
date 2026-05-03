@@ -1,5 +1,5 @@
 """
-SalonePrices – Configuration
+SaloneMarket – Configuration
 All API keys and settings live here. Copy .env.example → .env and fill in your values.
 """
 import os
@@ -9,8 +9,8 @@ load_dotenv()
 
 # ── Africa's Talking ─────────────────────────────────────────────────────────
 AT_API_KEY        = os.getenv("AT_API_KEY", "")
-AT_USERNAME       = os.getenv("AT_USERNAME", "sandbox")
-AT_SENDER_ID      = os.getenv("AT_SENDER_ID", "SalonePrices")  # must be approved by AT
+AT_USERNAME       = os.getenv("AT_USERNAME", "SaloneMarket")
+AT_SENDER_ID      = os.getenv("AT_SENDER_ID", "SaloneMarket")  # must be approved by AT
 AT_USSD_CODE      = os.getenv("AT_USSD_CODE", "*384*4321#")
 
 # ── Orange Money ─────────────────────────────────────────────────────────────

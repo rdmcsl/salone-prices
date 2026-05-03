@@ -1,5 +1,5 @@
 """
-SalonePrices – Flask web server
+SaloneMarket – Flask web server
 
 Routes:
     POST /ussd                  ← Africa's Talking USSD callback
@@ -324,7 +324,7 @@ def _build_whatsapp_reply(message: str, prices: dict) -> str:
 
     # Default → show menu
     return (
-        "\U0001f33e *Welcome to SalonePrices!*\n"
+        "\U0001f33e *Welcome to SaloneMarket!*\n"
         "Na wi yone free price service for Salone \U0001f1f8\U0001f1f1\n\n"
         "Text a number for TODAY\'s market prices:\n\n"
         "1 - \U0001f35a Rice\n"
@@ -358,13 +358,13 @@ def test_page():
         sample_msg = format_price_sms(prices, ["rice", "cassava", "palm_oil"])
         return jsonify({
             "status": "live",
-            "service": "SalonePrices 🌾",
+            "service": "SaloneMarket 🌾",
             "active_subscribers": len(subs),
             "crops_loaded": list(prices.keys()),
             "sample_sms": sample_msg,
             "ussd_code": "*384*3844321#",
-            "whatsapp": "SalonePrices Business",
-            "github": "https://github.com/rdmcsl/salone-prices"
+            "whatsapp": "SaloneMarket Business",
+            "github": "https://github.com/rdmcsl/salonemarket"
         })
     except Exception as e:
         return jsonify({"status": "ok", "note": str(e)}), 200
@@ -378,7 +378,7 @@ def admin_panel():
     html = """<!DOCTYPE html>
 <html>
 <head>
-  <title>SalonePrices Admin</title>
+  <title>SaloneMarket Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background: #f9f9f9; }
@@ -393,7 +393,7 @@ def admin_panel():
   </style>
 </head>
 <body>
-  <h1>🌾 SalonePrices Admin</h1>
+  <h1>🌾 SaloneMarket Admin</h1>
   <p style="color:#555">Control panel for your Sierra Leone crop price SMS service</p>
 
   <div class="card">
@@ -544,7 +544,7 @@ def send_test_sms():
         if not phone:
             return jsonify({"error": "phone required"}), 400
 
-        msg = "SalonePrices SL! Text a number for prices: 1=Rice 2=Cassava 3=PalmOil 4=Groundnut 5=Tomato 6=Maize 7=Fish 8=Onion 9=Oil 10=Salt 11=Pepper 12=SweetPotato 13=Eggs 14=Chicken 15=Meat. Reply now!"
+        msg = "SaloneMarket SL! Text a number for prices: 1=Rice 2=Cassava 3=PalmOil 4=Groundnut 5=Tomato 6=Maize 7=Fish 8=Onion 9=Oil 10=Salt 11=Pepper 12=SweetPotato 13=Eggs 14=Chicken 15=Meat. Reply now!"
 
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
         message = client.messages.create(
@@ -566,7 +566,7 @@ def send_test_sms():
 
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "SalonePrices"}), 200
+    return jsonify({"status": "ok", "service": "SaloneMarket"}), 200
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
@@ -574,5 +574,5 @@ def health():
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     debug = os.getenv("FLASK_ENV", "production") == "development"
-    logger.info("Starting SalonePrices on port %d (debug=%s)", port, debug)
+    logger.info("Starting SaloneMarket on port %d (debug=%s)", port, debug)
     app.run(host="0.0.0.0", port=port, debug=debug)

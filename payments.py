@@ -1,5 +1,5 @@
 """
-SalonePrices – Orange Money payment webhook
+SaloneMarket – Orange Money payment webhook
 
 Orange Money sends a POST to ORANGE_NOTIF_URL when a payment is confirmed.
 This module validates the notification and activates the subscriber.
@@ -55,7 +55,7 @@ def build_orange_payment_url(phone: str, amount_nle: int, plan: str = "individua
           "notif_url": "...",
           "cancel_url": "...",
           "lang": "en",
-          "reference": "SalonePrices monthly subscription"
+          "reference": "SaloneMarket monthly subscription"
         }
     """
     from config import ORANGE_NOTIF_URL
@@ -67,11 +67,11 @@ def build_orange_payment_url(phone: str, amount_nle: int, plan: str = "individua
         "order_id":     order_id,
         "amount":       amount_nle,
         "currency":     ORANGE_CURRENCY,
-        "return_url":   "https://salonemprices.sl/payment/success",
-        "cancel_url":   "https://salonemprices.sl/payment/cancel",
+        "return_url":   "https://salonemarket.sl/payment/success",
+        "cancel_url":   "https://salonemarket.sl/payment/cancel",
         "notif_url":    ORANGE_NOTIF_URL,
         "lang":         "en",
-        "reference":    f"SalonePrices {plan} subscription",
+        "reference":    f"SaloneMarket {plan} subscription",
     }
 
 

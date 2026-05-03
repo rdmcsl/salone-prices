@@ -1,5 +1,5 @@
 """
-SalonePrices – SMS sender
+SaloneMarket – SMS sender
 
 Handles:
   - Formatting the weekly price alert SMS (fits in 160 chars)
@@ -40,14 +40,14 @@ def format_price_sms(prices: dict, subscriber_crops: list[str]) -> str:
     Builds a single SMS (≤160 chars) for the given subscriber's chosen crops.
 
     Example output:
-        SalonePrices 28 Apr
+        SaloneMarket 28 Apr
         RICE: Bo 420 | FTN 460 | Ken 410
         CASSAVA: Bo 80 | FTN 95
         Best: sell RICE in Freetown.
         Txt STOP to unsub
     """
     today = date.today().strftime("%-d %b")
-    lines = [f"SalonePrices {today}"]
+    lines = [f"SaloneMarket {today}"]
 
     best_crop = None
     best_market_name = None
@@ -101,7 +101,7 @@ def format_price_sms(prices: dict, subscriber_crops: list[str]) -> str:
 def format_welcome_sms(name: str, crops: list[str]) -> str:
     crop_names = ", ".join(CROPS[c]["name"] for c in crops if c in CROPS)
     return (
-        f"Welcome to SalonePrices, {name}! "
+        f"Welcome to SaloneMarket, {name}! "
         f"You'll get weekly prices for: {crop_names}. "
         f"First alert Monday 7am. Txt STOP to unsubscribe."
     )[:160]
@@ -109,14 +109,14 @@ def format_welcome_sms(name: str, crops: list[str]) -> str:
 
 def format_payment_confirmation_sms(name: str, paid_until: str) -> str:
     return (
-        f"SalonePrices: Payment confirmed, {name}. "
+        f"SaloneMarket: Payment confirmed, {name}. "
         f"Subscription active until {paid_until}. Thank you!"
     )[:160]
 
 
 def format_trial_ending_sms(name: str, days_left: int) -> str:
     return (
-        f"SalonePrices: Your free trial ends in {days_left} day(s), {name}. "
+        f"SaloneMarket: Your free trial ends in {days_left} day(s), {name}. "
         f"Dial *384*4321# to pay NLE 5,000/month and keep your alerts."
     )[:160]
 

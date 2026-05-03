@@ -1,5 +1,5 @@
 """
-SalonePrices – USSD handler (Africa's Talking USSD callback)
+SaloneMarket – USSD handler (Africa's Talking USSD callback)
 
 Africa's Talking sends a POST request to your USSD callback URL every time
 a user navigates the menu. You respond with:
@@ -8,7 +8,7 @@ a user navigates the menu. You respond with:
 
 Menu flow:
     *384*4321#
-    → 1. Subscribe to SalonePrices
+    → 1. Subscribe to SaloneMarket
         → Enter your name
         → Select district (1-12)
         → Select up to 3 crops
@@ -60,7 +60,7 @@ def handle_ussd(
     # ── Root menu ─────────────────────────────────────────────────────────────
     if text == "":
         return (
-            "CON Welcome to SalonePrices\n"
+            "CON Welcome to SaloneMarket\n"
             "Weekly crop prices by SMS\n\n"
             "1. Subscribe\n"
             "2. Unsubscribe\n"
@@ -191,7 +191,7 @@ def _unsubscribe_flow(phone: str, parts: list[str]) -> str:
 
     if depth == 1:
         return (
-            "CON Are you sure you want to unsubscribe from SalonePrices?\n\n"
+            "CON Are you sure you want to unsubscribe from SaloneMarket?\n\n"
             "1. Yes, unsubscribe\n"
             "2. No, keep my subscription"
         )
@@ -199,7 +199,7 @@ def _unsubscribe_flow(phone: str, parts: list[str]) -> str:
     confirm = parts[1].strip()
     if confirm == "1":
         remove_subscriber(phone)
-        send_sms(phone, "You have been unsubscribed from SalonePrices. Dial *384*4321# to re-subscribe anytime.")
+        send_sms(phone, "You have been unsubscribed from SaloneMarket. Dial *384*4321# to re-subscribe anytime.")
         return "END You have been unsubscribed. We're sorry to see you go!"
     else:
         return "END Your subscription is still active. Thank you for staying!"

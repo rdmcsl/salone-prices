@@ -1,5 +1,5 @@
 """
-SalonePrices – Seed sample price data into all 12 crop tabs
+SaloneMarket – Seed sample price data into all 12 crop tabs
 Run once to populate the Google Sheet with realistic sample data.
 """
 import json
