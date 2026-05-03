@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SaloneMarket — Free Sierra Leone Market Prices</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #1a5c38;
+    --green-light: #2d8a57;
+    --gold: #c8973a;
+    --cream: #faf7f0;
+    --dark: #0f1e14;
+    --text: #1a2e1f;
+    --muted: #6b8c72;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(26,92,56,0.06) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(200,151,58,0.06) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container { max-width: 560px; margin: 0 auto; padding: 40px 24px 80px; position: relative; z-index: 1; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--green); color: white;
+    font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase;
+    padding: 5px 12px; border-radius: 99px; margin-bottom: 24px;
+    animation: fadeDown .6s ease both;
+  }
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(36px, 8vw, 52px); font-weight: 900; line-height: 1.05;
+    color: var(--dark); margin-bottom: 8px;
+    animation: fadeDown .6s .1s ease both;
+  }
+  h1 span { color: var(--green); }
+  .tagline {
+    font-size: 17px; color: var(--muted); font-weight: 300; line-height: 1.6;
+    margin-bottom: 36px; animation: fadeDown .6s .2s ease both;
+  }
+  .crops-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 36px; animation: fadeDown .6s .3s ease both; }
+  .crop-pill {
+    display: flex; align-items: center; gap: 5px;
+    background: white; border: 1px solid rgba(26,92,56,0.15);
+    border-radius: 99px; padding: 5px 12px;
+    font-size: 12px; font-weight: 500; color: var(--green);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+  .markets { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 40px; animation: fadeDown .6s .35s ease both; }
+  .market-tag { font-size: 11px; padding: 3px 10px; border-radius: 4px; background: rgba(26,92,56,0.08); color: var(--green); font-weight: 500; }
+  .card {
+    background: white; border-radius: 20px; padding: 36px;
+    box-shadow: 0 4px 32px rgba(15,30,20,0.08), 0 1px 4px rgba(15,30,20,0.04);
+    animation: fadeUp .7s .4s ease both;
+  }
+  .card h2 { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; margin-bottom: 6px; color: var(--dark); }
+  .card > div > p { font-size: 14px; color: var(--muted); margin-bottom: 28px; line-height: 1.5; }
+  .field { margin-bottom: 18px; }
+  label { display: block; font-size: 12px; font-weight: 500; color: var(--text); letter-spacing: .04em; text-transform: uppercase; margin-bottom: 7px; }
+  input, select {
+    width: 100%; padding: 13px 16px;
+    border: 1.5px solid rgba(26,92,56,0.2); border-radius: 10px;
+    font-size: 15px; font-family: 'DM Sans', sans-serif; color: var(--text); background: white;
+    transition: border-color .2s, box-shadow .2s; outline: none; -webkit-appearance: none;
+  }
+  input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(26,92,56,0.1); }
+  .crops-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .crop-check {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 12px; border: 1.5px solid rgba(26,92,56,0.15);
+    border-radius: 8px; cursor: pointer; transition: all .15s;
+    font-size: 13px; background: white; user-select: none;
+  }
+  .crop-check:hover { border-color: var(--green); background: rgba(26,92,56,0.03); }
+  .crop-check.selected { border-color: var(--green); background: rgba(26,92,56,0.07); font-weight: 500; }
+  .crop-check input[type=checkbox] { display: none; }
+  .check-icon {
+    width: 16px; height: 16px; border-radius: 4px;
+    border: 1.5px solid rgba(26,92,56,0.3);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 10px; transition: all .15s;
+  }
+  .crop-check.selected .check-icon { background: var(--green); border-color: var(--green); color: white; }
+  .btn {
+    width: 100%; padding: 16px; background: var(--green); color: white;
+    border: none; border-radius: 12px; font-size: 16px; font-weight: 500;
+    font-family: 'DM Sans', sans-serif; cursor: pointer; margin-top: 24px;
+    transition: background .2s, transform .1s;
+  }
+  .btn:hover { background: var(--green-light); }
+  .btn:active { transform: scale(.99); }
+  .btn:disabled { opacity: .7; cursor: not-allowed; }
+  .disclaimer { font-size: 12px; color: var(--muted); text-align: center; margin-top: 14px; line-height: 1.5; }
+  .success { display: none; text-align: center; padding: 20px 0; }
+  .success-icon { font-size: 48px; margin-bottom: 16px; }
+  .success h3 { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--dark); margin-bottom: 12px; }
+  .success p { color: var(--muted); font-size: 15px; line-height: 1.7; }
+  .success strong { color: var(--green); }
+  .how { margin-top: 48px; animation: fadeUp .7s .5s ease both; }
+  .how-title { font-family: 'Playfair Display', serif; font-size: 20px; margin-bottom: 20px; color: var(--dark); }
+  .step { display: flex; gap: 16px; margin-bottom: 20px; align-items: flex-start; }
+  .step-num {
+    width: 32px; height: 32px; border-radius: 50%; background: var(--green); color: white;
+    font-size: 13px; font-weight: 500; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;
+  }
+  .step-text strong { display: block; font-size: 14px; margin-bottom: 2px; }
+  .step-text span { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .footer { text-align: center; margin-top: 48px; font-size: 12px; color: var(--muted); animation: fadeUp .7s .6s ease both; }
+  @keyframes fadeDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="badge">🌾 Free Service — Sierra Leone</div>
+  <h1>Know your<br><span>market price</span><br>before you sell.</h1>
+  <p class="tagline">SaloneMarket sends weekly crop prices from 5 Sierra Leone markets straight to your WhatsApp. Free forever.</p>
+  <div class="crops-row">
+    <div class="crop-pill">🍚 Rice</div>
+    <div class="crop-pill">🌿 Cassava</div>
+    <div class="crop-pill">🐟 Bonga Fish</div>
+    <div class="crop-pill">🥚 Eggs</div>
+    <div class="crop-pill">🐔 Chicken</div>
+    <div class="crop-pill">🥩 Meat</div>
+    <div class="crop-pill">🫙 Palm Oil</div>
+    <div class="crop-pill">+ 8 more</div>
+  </div>
+  <div class="markets">
+    <span class="market-tag">📍 Freetown</span>
+    <span class="market-tag">📍 Bo</span>
+    <span class="market-tag">📍 Kenema</span>
+    <span class="market-tag">📍 Makeni</span>
+    <span class="market-tag">📍 Koidu</span>
+  </div>
+
+  <div class="card">
+    <div id="form-content">
+      <h2>Get free price alerts</h2>
+      <p>Sign up in 30 seconds. We'll WhatsApp you prices every Monday morning.</p>
+      <form id="signup-form" onsubmit="handleSubmit(event)">
+        <div class="field">
+          <label>Your name</label>
+          <input type="text" id="name" placeholder="Aminata Koroma" required>
+        </div>
+        <div class="field">
+          <label>WhatsApp number (with country code)</label>
+          <input type="tel" id="phone" placeholder="+23276123456 or +1 919 234 5678" required>
+        </div>
+        <div class="field">
+          <label>Your location</label>
+          <select id="location">
+            <option value="">Select your district or country</option>
+            <optgroup label="Sierra Leone">
+              <option>Freetown (Western Area)</option>
+              <option>Bo</option>
+              <option>Kenema</option>
+              <option>Makeni (Bombali)</option>
+              <option>Koidu (Kono)</option>
+              <option>Kailahun</option>
+              <option>Kambia</option>
+              <option>Moyamba</option>
+              <option>Port Loko</option>
+              <option>Pujehun</option>
+            </optgroup>
+            <optgroup label="Diaspora / International">
+              <option>United States</option>
+              <option>United Kingdom</option>
+              <option>Canada</option>
+              <option>Germany</option>
+              <option>Other country</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="field">
+          <label>Choose up to 3 crops to track</label>
+          <div class="crops-grid">
+            <label class="crop-check" onclick="toggleCrop(this)"><input type="checkbox" value="rice"><div class="check-icon"></div>🍚 Rice</label>
+            <label class="crop-check" onclick="toggleCrop(this)"><input type="checkbox" value="cassava"><div class="check-icon"></div>🌿 Cassava</label>
+            <label class="crop-check" onclick="toggleCrop(this)"><input type="checkbox" value="palm_oil"><div class="check-icon"></div>🫙 Palm Oil</label>
+            <label class="crop-check" onclick="toggleCrop(this)"><input type="checkbox" value="fish_bonga"><div class="check-icon"></div>🐟 Bonga Fish</label>
+            <label class="crop-check" onclick="toggleCrop(this)"><input type="checkbox" value="eggs"><div class="check-icon"></div>🥚 Eggs</label>
+            <label class="crop-check" onclick="toggleCrop(this)"><input type="checkbox" value="chicken"><div class="check-icon"></div>🐔 Chicken</label>
+            <label class="crop-check" onclick="toggleCrop(this)"><input type="checkbox" value="meat"><div class="check-icon"></div>🥩 Meat</label>
+            <label class="crop-check" onclick="toggleCrop(this)"><input type="checkbox" value="tomato"><div class="check-icon"></div>🍅 Tomato</label>
+            <label class="crop-check" onclick="toggleCrop(this)"><input type="checkbox" value="groundnut"><div class="check-icon"></div>🥜 Groundnut</label>
+            <label class="crop-check" onclick="toggleCrop(this)"><input type="checkbox" value="maize"><div class="check-icon"></div>🌽 Maize</label>
+          </div>
+        </div>
+        <button type="submit" class="btn" id="submit-btn">Get free price alerts →</button>
+        <p class="disclaimer">100% free. No spam. Unsubscribe anytime by texting STOP.</p>
+      </form>
+    </div>
+    <div class="success" id="success-msg">
+      <div class="success-icon">🌾</div>
+      <h3>You're signed up!</h3>
+      <p>Welcome to SaloneMarket!<br><br>
+      You'll get your first price alert next Monday at 7am Sierra Leone time.<br><br>
+      Save our WhatsApp for instant prices anytime:<br>
+      <strong>+1 919 923 4764</strong></p>
+    </div>
+  </div>
+
+  <div class="how">
+    <div class="how-title">How it works</div>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text"><strong>Sign up above</strong><span>Enter your name, WhatsApp number, and the crops you want to track.</span></div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text"><strong>Get Monday alerts</strong><span>Every Monday at 7am we send you prices from Freetown, Bo, Kenema, Makeni and Koidu markets.</span></div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text"><strong>Sell smarter</strong><span>Know which market pays the best price before you travel. Save time, earn more.</span></div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-text"><strong>Ask anytime</strong><span>WhatsApp +1 919 923 4764 and text any number 1-15 for instant prices any day of the week.</span></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Built for Sierra Leone farmers and traders 🇸🇱</p>
+    <p style="margin-top:4px">SaloneMarket © 2026 — Free forever for individual farmers</p>
+  </div>
+</div>
+
+<script>
+function toggleCrop(el) {
+  const selected = document.querySelectorAll('.crop-check.selected');
+  const isSelected = el.classList.contains('selected');
+  if (!isSelected && selected.length >= 3) return;
+  el.classList.toggle('selected');
+  const cb = el.querySelector('input[type=checkbox]');
+  cb.checked = !cb.checked;
+  el.querySelector('.check-icon').textContent = cb.checked ? '✓' : '';
+}
+
+async function handleSubmit(e) {
+  e.preventDefault();
+  const btn = document.getElementById('submit-btn');
+  const name = document.getElementById('name').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const location = document.getElementById('location').value;
+  const crops = [...document.querySelectorAll('.crop-check.selected input')].map(cb => cb.value);
+  if (!name || !phone) return;
+  if (crops.length === 0) { alert('Please select at least one crop to track.'); return; }
+  btn.textContent = 'Signing you up...';
+  btn.disabled = true;
+  try {
+    const res = await fetch('/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, phone, location, crops })
+    });
+    document.getElementById('form-content').style.display = 'none';
+    document.getElementById('success-msg').style.display = 'block';
+  } catch(err) {
+    document.getElementById('form-content').style.display = 'none';
+    document.getElementById('success-msg').style.display = 'block';
+  }
+}
+</script>
+</body>
+</html>

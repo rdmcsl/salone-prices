@@ -30,7 +30,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="templates", static_url_path="")
 
 # ── USSD route ────────────────────────────────────────────────────────────────
 
@@ -157,6 +157,56 @@ def admin_trigger_blast():
         "sent":   sum(1 for r in results if r.get("status") == "success"),
         "failed": sum(1 for r in results if r.get("status") == "failed"),
     })
+
+
+# ── Signup landing page ──────────────────────────────────────────────────────
+
+@app.route("/", methods=["GET"])
+def landing():
+    """Public signup landing page."""
+    return app.send_static_file("signup.html")
+
+
+@app.route("/signup", methods=["POST"])
+def signup():
+    """Handle signup form submission — saves to Google Sheet."""
+    data     = request.get_json(silent=True) or {}
+    name     = data.get("name", "").strip()
+    phone    = data.get("phone", "").strip()
+    location = data.get("location", "").strip()
+    crops    = data.get("crops", [])
+
+    if not name or not phone:
+        return jsonify({"status": "error", "reason": "name and phone required"}), 400
+
+    # Normalise phone
+    phone = phone.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+    if not phone.startswith("+"):
+        phone = "+" + phone
+
+    # Determine district from location
+    district = location if location else "Unknown"
+
+    try:
+        from sheets import add_subscriber
+        success = add_subscriber(
+            phone=phone,
+            name=name,
+            district=district,
+            crops=crops if crops else ["rice", "cassava", "palm_oil"],
+            plan="individual",
+        )
+        logger.info("New signup: %s %s %s", name, phone, district)
+        return jsonify({"status": "ok", "message": "Subscribed successfully"})
+    except Exception as e:
+        logger.warning("Signup sheet write failed (saving locally): %s", e)
+        # Save locally as fallback
+        import os
+        os.makedirs("logs", exist_ok=True)
+        with open("logs/signups_pending.txt", "a") as f:
+            line = ",".join([name, phone, district] + crops)
+            f.write(line + "\n")
+        return jsonify({"status": "pending", "message": "Saved"})
 
 
 # ── Debug endpoint ───────────────────────────────────────────────────────────
