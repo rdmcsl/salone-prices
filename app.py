@@ -333,7 +333,7 @@ def _build_whatsapp_reply(message: str, prices: dict) -> str:
     if message == "weekly":
         return (
             "\U0001f4f2 To get weekly Monday price alerts, dial *384*3844321# "
-            "on your phone and select option 1 to subscribe. It\u2019s free for 4 weeks!"
+            "on your phone and select option 1 to subscribe. It\u2019s available now!"
         )
 
     # Number → instant price
@@ -375,7 +375,7 @@ def _build_whatsapp_reply(message: str, prices: dict) -> str:
     # Default → show menu
     return (
         "\U0001f33e *Welcome to SaloneMarket!*\n"
-        "Na wi yone free price service for Salone \U0001f1f8\U0001f1f1\n\n"
+        "Na wi yone price service for Salone \U0001f1f8\U0001f1f1\n\n"
         "Text a number for TODAY\'s market prices:\n\n"
         "1 - \U0001f35a Rice\n"
         "2 - \U0001f33f Cassava\n"

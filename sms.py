@@ -116,7 +116,7 @@ def format_payment_confirmation_sms(name: str, paid_until: str) -> str:
 
 def format_trial_ending_sms(name: str, days_left: int) -> str:
     return (
-        f"SaloneMarket: Your free trial ends in {days_left} day(s), {name}. "
+        f"SaloneMarket: Your trial period ends in {days_left} day(s), {name}. "
         f"Dial *384*4321# to pay NLE 5,000/month and keep your alerts."
     )[:160]
 

@@ -148,7 +148,7 @@ def _subscribe_flow(session_id: str, phone: str, parts: list[str]) -> str:
 
     # Final confirmation + payment prompt
     crop_names = ", ".join(CROPS[c]["name"] for c in chosen_crops)
-    fee_display = "FREE for 4 weeks, then NLE 5,000/month"
+    fee_display = "NLE 5,000/month"
 
     # Register subscriber (graceful fallback if Google Sheets not configured yet)
     try:
