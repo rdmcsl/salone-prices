@@ -25,26 +25,30 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(250,247,240,
 .nav-cta:hover{background:var(--green-light)}
 
 /* ── HERO ── */
-.hero{min-height:100vh;display:flex;align-items:center;position:relative;overflow:hidden;padding:100px 24px 60px}
+.hero{min-height:100vh;display:flex;align-items:flex-start;flex-direction:column;justify-content:center;position:relative;overflow:hidden;padding:100px 24px 220px}
+@media(max-width:640px){.hero{padding:80px 16px 280px;min-height:auto}}
 .hero-bg{position:absolute;inset:0;background:linear-gradient(135deg,#0f3d24 0%,#1a5c38 50%,#2d8a57 100%);z-index:0}
 .hero-pattern{position:absolute;inset:0;background-image:radial-gradient(circle at 1px 1px,rgba(255,255,255,0.05) 1px,transparent 0);background-size:32px 32px;z-index:1}
 .hero-glow{position:absolute;top:-20%;right:-10%;width:600px;height:600px;background:radial-gradient(circle,rgba(200,151,58,0.2) 0%,transparent 70%);z-index:1;animation:pulse 4s ease-in-out infinite}
-.hero-content{position:relative;z-index:2;max-width:700px;margin:0 auto;text-align:center}
+.hero-content{position:relative;z-index:2;max-width:700px;margin:0 auto;text-align:center;padding-bottom:20px}
 .hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(200,151,58,0.2);border:1px solid rgba(200,151,58,0.4);color:var(--gold-light);font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;padding:6px 14px;border-radius:99px;margin-bottom:28px;animation:fadeDown .8s ease both}
 .hero h1{font-family:'Playfair Display',serif;font-size:clamp(40px,7vw,72px);font-weight:900;line-height:1.05;color:white;margin-bottom:20px;animation:fadeDown .8s .15s ease both}
 .hero h1 em{color:var(--gold-light);font-style:italic}
 .hero-sub{font-size:18px;color:rgba(255,255,255,0.75);font-weight:300;line-height:1.7;margin-bottom:40px;max-width:520px;margin-left:auto;margin-right:auto;animation:fadeDown .8s .3s ease both}
-.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;animation:fadeDown .8s .45s ease both}
+.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;animation:fadeDown .8s .45s ease both;margin-bottom:20px}
 .btn-hero-primary{background:var(--gold);color:var(--dark);border:none;padding:14px 28px;border-radius:99px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:none;transition:all .2s;box-shadow:0 4px 20px rgba(200,151,58,0.4)}
 .btn-hero-primary:hover{background:var(--gold-light);transform:translateY(-2px);box-shadow:0 8px 28px rgba(200,151,58,0.5)}
 .btn-hero-secondary{background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.3);padding:14px 28px;border-radius:99px;font-size:15px;font-weight:500;cursor:pointer;font-family:inherit;text-decoration:none;transition:all .2s;backdrop-filter:blur(4px)}
 .btn-hero-secondary:hover{background:rgba(255,255,255,0.2)}
 
 /* Floating price cards */
-.float-cards{position:absolute;bottom:40px;left:0;right:0;z-index:2;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;padding:0 24px;animation:fadeUp 1s .6s ease both}
-.float-card{background:rgba(255,255,255,0.12);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.2);border-radius:12px;padding:10px 16px;text-align:center;min-width:100px}
+.float-cards{position:absolute;bottom:24px;left:0;right:0;z-index:2;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:0 16px;animation:fadeUp 1s .6s ease both}
+@media(max-width:640px){.float-cards{position:static;margin-top:32px;padding:0}}
+.float-card{background:rgba(255,255,255,0.12);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.2);border-radius:12px;padding:10px 14px;text-align:center;min-width:90px;flex:1;max-width:130px}
+@media(max-width:480px){.float-card{min-width:calc(33% - 8px);max-width:none;padding:8px 10px}}
 .float-card-label{font-size:10px;color:rgba(255,255,255,0.6);letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
-.float-card-price{font-size:16px;font-weight:600;color:white}
+.float-card-price{font-size:15px;font-weight:600;color:white}
+@media(max-width:480px){.float-card-price{font-size:13px}}
 .float-card-market{font-size:10px;color:var(--gold-light)}
 
 /* ── TICKER ── */
