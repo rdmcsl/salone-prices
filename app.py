@@ -197,16 +197,37 @@ def signup():
             plan="individual",
         )
         logger.info("New signup: %s %s %s", name, phone, district)
-        return jsonify({"status": "ok", "message": "Subscribed successfully"})
     except Exception as e:
         logger.warning("Signup sheet write failed (saving locally): %s", e)
-        # Save locally as fallback
         import os
         os.makedirs("logs", exist_ok=True)
         with open("logs/signups_pending.txt", "a") as f:
             line = ",".join([name, phone, district] + crops)
             f.write(line + "\n")
-        return jsonify({"status": "pending", "message": "Saved"})
+
+    # Send welcome SMS immediately after signup
+    try:
+        from config import CROPS as ALL_CROPS
+        first_name = name.split()[0] if name else "Farmer"
+        crop_names = ", ".join(
+            ALL_CROPS[c]["name"] for c in (crops or ["rice","cassava","palm_oil"])
+            if c in ALL_CROPS
+        )
+        district_str = district if district else "Sierra Leone"
+        welcome_msg = (
+            f"Welcome to SaloneMarket, {first_name}! "
+            f"You are now subscribed for weekly market prices. "
+            f"Tracking: {crop_names}. "
+            f"Prices sent every Monday 7am. "
+            f"Text 1-15 anytime for instant prices. "
+            f"Reply STOP to unsubscribe."
+        )[:160]
+        sms_result = send_sms(phone, welcome_msg)
+        logger.info("Welcome SMS sent to %s: %s", phone, sms_result)
+    except Exception as sms_err:
+        logger.warning("Welcome SMS failed (non-critical): %s", sms_err)
+
+    return jsonify({"status": "ok", "message": "Subscribed successfully"})
 
 
 # ── Debug endpoint ───────────────────────────────────────────────────────────

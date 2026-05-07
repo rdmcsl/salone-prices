@@ -125,18 +125,44 @@ def format_trial_ending_sms(name: str, days_left: int) -> str:
 
 def send_sms(phone: str, message: str) -> dict:
     """
-    Sends a single SMS. Returns the Africa's Talking response dict.
-    Phone must be in international format: +23276XXXXXXX
+    Sends a single SMS via Africa's Talking (Sierra Leone numbers)
+    or Twilio (international/US numbers).
+    Phone must be in international format: +23276XXXXXXX or +1XXXXXXXXXX
     """
+    # Use Twilio for non-Sierra Leone numbers (US, UK, diaspora)
+    is_salone = phone.startswith("+232")
+    if not is_salone:
+        return _send_via_twilio(phone, message)
+
+    # Use Africa's Talking for Sierra Leone numbers
     if _sms is None:
-        logger.warning("SMS skipped (AT not initialized): %s", phone)
-        return {"error": "AT not initialized"}
+        logger.warning("AT SMS skipped (not initialized): %s", phone)
+        return _send_via_twilio(phone, message)
     try:
         response = _sms.send(message, [phone], sender_id=AT_SENDER_ID)
-        logger.debug("SMS sent to %s: %s", phone, response)
+        logger.debug("AT SMS sent to %s: %s", phone, response)
         return response
     except Exception as exc:
-        logger.error("SMS send failed to %s: %s", phone, exc)
+        logger.warning("AT SMS failed, trying Twilio: %s", exc)
+        return _send_via_twilio(phone, message)
+
+
+def _send_via_twilio(phone: str, message: str) -> dict:
+    """Fallback SMS via Twilio for international numbers."""
+    try:
+        import os
+        from twilio.rest import Client
+        sid   = os.getenv("TWILIO_ACCOUNT_SID") or "ACf4a122b66ac0a014d516453eeac070c8"
+        token = os.getenv("TWILIO_AUTH_TOKEN")  or "3f40fc6f4f2c93af2860c2f6d858cf12"
+        frm   = os.getenv("TWILIO_FROM_NUMBER") or "+12295623289"
+        if not sid or not token:
+            return {"error": "Twilio not configured"}
+        client = Client(sid, token)
+        msg = client.messages.create(body=message, from_=frm, to=phone)
+        logger.info("Twilio SMS sent to %s: %s", phone, msg.sid)
+        return {"MessageData": {"Message": "Sent", "sid": msg.sid}}
+    except Exception as exc:
+        logger.error("Twilio SMS failed to %s: %s", phone, exc)
         return {"error": str(exc)}
 
 
