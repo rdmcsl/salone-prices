@@ -185,7 +185,11 @@
           </select>
         </div>
         <div class="field">
-          <label>Choose up to 3 crops to track</label>
+          <label>Choose the crops you want to track <span id="crop-counter" style="color:var(--green);font-weight:500;text-transform:none;letter-spacing:0">0 selected</span></label>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <button type="button" onclick="selectAllCrops()" style="font-size:12px;padding:5px 12px;border:1px solid rgba(26,92,56,0.3);background:transparent;border-radius:6px;cursor:pointer;color:var(--green);font-family:inherit">Select all</button>
+            <button type="button" onclick="clearAllCrops()" style="font-size:12px;padding:5px 12px;border:1px solid rgba(26,92,56,0.15);background:transparent;border-radius:6px;cursor:pointer;color:var(--muted);font-family:inherit">Clear all</button>
+          </div>
           <div class="crops-grid">
             <label class="crop-check" onclick="toggleCrop(this, event)"><input type="checkbox" value="rice"><div class="check-icon"></div>🍚 Rice</label>
             <label class="crop-check" onclick="toggleCrop(this, event)"><input type="checkbox" value="cassava"><div class="check-icon"></div>🌿 Cassava</label>
@@ -243,17 +247,36 @@
 <script>
 function toggleCrop(el, event) {
   event.preventDefault();
-  const selected = document.querySelectorAll('.crop-check.selected');
   const isSelected = el.classList.contains('selected');
-  if (!isSelected && selected.length >= 3) {
-    el.style.border = "1.5px solid #c8973a";
-    setTimeout(() => el.style.border = "", 600);
-    return;
-  }
   el.classList.toggle('selected');
   const cb = el.querySelector('input[type=checkbox]');
   cb.checked = !isSelected;
   el.querySelector('.check-icon').textContent = cb.checked ? '✓' : '';
+  // Update counter
+  const count = document.querySelectorAll('.crop-check.selected').length;
+  const counter = document.getElementById('crop-counter');
+  if (counter) counter.textContent = count + ' selected';
+}
+
+function selectAllCrops() {
+  document.querySelectorAll('.crop-check').forEach(el => {
+    el.classList.add('selected');
+    const cb = el.querySelector('input[type=checkbox]');
+    cb.checked = true;
+    el.querySelector('.check-icon').textContent = '✓';
+  });
+  const count = document.querySelectorAll('.crop-check.selected').length;
+  document.getElementById('crop-counter').textContent = count + ' selected';
+}
+
+function clearAllCrops() {
+  document.querySelectorAll('.crop-check').forEach(el => {
+    el.classList.remove('selected');
+    const cb = el.querySelector('input[type=checkbox]');
+    cb.checked = false;
+    el.querySelector('.check-icon').textContent = '';
+  });
+  document.getElementById('crop-counter').textContent = '0 selected';
 }
 
 async function handleSubmit(e) {
