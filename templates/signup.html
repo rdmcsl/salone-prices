@@ -187,18 +187,19 @@
         <div class="field">
           <label>Choose up to 3 crops to track</label>
           <div class="crops-grid">
-            <label class="crop-check" onclick="toggleCrop(this)"><input type="checkbox" value="rice"><div class="check-icon"></div>🍚 Rice</label>
-            <label class="crop-check" onclick="toggleCrop(this)"><input type="checkbox" value="cassava"><div class="check-icon"></div>🌿 Cassava</label>
-            <label class="crop-check" onclick="toggleCrop(this)"><input type="checkbox" value="palm_oil"><div class="check-icon"></div>🫙 Palm Oil</label>
-            <label class="crop-check" onclick="toggleCrop(this)"><input type="checkbox" value="fish_bonga"><div class="check-icon"></div>🐟 Bonga Fish</label>
-            <label class="crop-check" onclick="toggleCrop(this)"><input type="checkbox" value="eggs"><div class="check-icon"></div>🥚 Eggs</label>
-            <label class="crop-check" onclick="toggleCrop(this)"><input type="checkbox" value="chicken"><div class="check-icon"></div>🐔 Chicken</label>
-            <label class="crop-check" onclick="toggleCrop(this)"><input type="checkbox" value="meat"><div class="check-icon"></div>🥩 Meat</label>
-            <label class="crop-check" onclick="toggleCrop(this)"><input type="checkbox" value="tomato"><div class="check-icon"></div>🍅 Tomato</label>
-            <label class="crop-check" onclick="toggleCrop(this)"><input type="checkbox" value="groundnut"><div class="check-icon"></div>🥜 Groundnut</label>
-            <label class="crop-check" onclick="toggleCrop(this)"><input type="checkbox" value="maize"><div class="check-icon"></div>🌽 Maize</label>
+            <label class="crop-check" onclick="toggleCrop(this, event)"><input type="checkbox" value="rice"><div class="check-icon"></div>🍚 Rice</label>
+            <label class="crop-check" onclick="toggleCrop(this, event)"><input type="checkbox" value="cassava"><div class="check-icon"></div>🌿 Cassava</label>
+            <label class="crop-check" onclick="toggleCrop(this, event)"><input type="checkbox" value="palm_oil"><div class="check-icon"></div>🫙 Palm Oil</label>
+            <label class="crop-check" onclick="toggleCrop(this, event)"><input type="checkbox" value="fish_bonga"><div class="check-icon"></div>🐟 Bonga Fish</label>
+            <label class="crop-check" onclick="toggleCrop(this, event)"><input type="checkbox" value="eggs"><div class="check-icon"></div>🥚 Eggs</label>
+            <label class="crop-check" onclick="toggleCrop(this, event)"><input type="checkbox" value="chicken"><div class="check-icon"></div>🐔 Chicken</label>
+            <label class="crop-check" onclick="toggleCrop(this, event)"><input type="checkbox" value="meat"><div class="check-icon"></div>🥩 Meat</label>
+            <label class="crop-check" onclick="toggleCrop(this, event)"><input type="checkbox" value="tomato"><div class="check-icon"></div>🍅 Tomato</label>
+            <label class="crop-check" onclick="toggleCrop(this, event)"><input type="checkbox" value="groundnut"><div class="check-icon"></div>🥜 Groundnut</label>
+            <label class="crop-check" onclick="toggleCrop(this, event)"><input type="checkbox" value="maize"><div class="check-icon"></div>🌽 Maize</label>
           </div>
         </div>
+        <p id="crop-error" style="display:none;color:#c0392b;font-size:13px;margin-top:8px">Please select at least one crop above.</p>
         <button type="submit" class="btn" id="submit-btn">Get free price alerts →</button>
         <p class="disclaimer">100% free. No spam. Unsubscribe anytime by texting STOP.</p>
       </form>
@@ -240,13 +241,18 @@
 </div>
 
 <script>
-function toggleCrop(el) {
+function toggleCrop(el, event) {
+  event.preventDefault();
   const selected = document.querySelectorAll('.crop-check.selected');
   const isSelected = el.classList.contains('selected');
-  if (!isSelected && selected.length >= 3) return;
+  if (!isSelected && selected.length >= 3) {
+    el.style.border = "1.5px solid #c8973a";
+    setTimeout(() => el.style.border = "", 600);
+    return;
+  }
   el.classList.toggle('selected');
   const cb = el.querySelector('input[type=checkbox]');
-  cb.checked = !cb.checked;
+  cb.checked = !isSelected;
   el.querySelector('.check-icon').textContent = cb.checked ? '✓' : '';
 }
 
@@ -258,7 +264,11 @@ async function handleSubmit(e) {
   const location = document.getElementById('location').value;
   const crops = [...document.querySelectorAll('.crop-check.selected input')].map(cb => cb.value);
   if (!name || !phone) return;
-  if (crops.length === 0) { alert('Please select at least one crop to track.'); return; }
+  if (crops.length === 0) {
+    document.getElementById('crop-error').style.display = 'block';
+    return;
+  }
+  document.getElementById('crop-error').style.display = 'none';
   btn.textContent = 'Signing you up...';
   btn.disabled = true;
   try {
