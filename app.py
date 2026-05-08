@@ -127,7 +127,7 @@ def admin_blast_preview():
     return jsonify({"previews": previews, "total_active": len(get_active_subscribers())})
 
 
-@app.route("/admin/setup-cement-fuel-tabs", methods=["POST"])
+@app.route("/admin/setup-cement-fuel-tabs", methods=["GET", "POST"])
 def admin_setup_cement_fuel_tabs():
     """One-time setup: creates CementImported, CementLocal, Petrol, Diesel, Kerosene tabs."""
     try:
