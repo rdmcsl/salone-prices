@@ -127,6 +127,17 @@ def admin_blast_preview():
     return jsonify({"previews": previews, "total_active": len(get_active_subscribers())})
 
 
+@app.route("/admin/setup-cement-fuel-tabs", methods=["POST"])
+def admin_setup_cement_fuel_tabs():
+    """One-time setup: creates CementImported, CementLocal, Petrol, Diesel, Kerosene tabs."""
+    try:
+        from setup_cement_fuel_tabs import create_cement_fuel_tabs
+        results = create_cement_fuel_tabs()
+        return jsonify({"status": "ok", "tabs": results})
+    except Exception as e:
+        return jsonify({"status": "error", "reason": str(e)})
+
+
 @app.route("/admin/fetch-cement-fuel", methods=["POST"])
 def admin_fetch_cement_fuel():
     """Fetch and write Ministry of Trade cement + NPC fuel prices to sheet."""
@@ -513,9 +524,13 @@ def admin_panel():
 
   <div class="card">
     <span class="badge" style="background:#c8973a;color:#333">Ministry of Trade</span>
-    <h3 style="margin:0 0 4px">Update Cement &amp; Fuel Prices</h3>
-    <p style="color:#555;font-size:14px">Write current Ministry of Trade cement prices + NPC fuel prices to your Google Sheet</p>
-    <button onclick="callApi('POST', '/admin/fetch-cement-fuel', null, 'cement-result')" style="background:#c8973a">Update Cement &amp; Fuel Now</button>
+    <h3 style="margin:0 0 4px">Cement &amp; Fuel Setup</h3>
+    <p style="color:#555;font-size:14px">Step 1: Create the CementImported, CementLocal, Petrol, Diesel and Kerosene tabs in your Google Sheet (run once)</p>
+    <button onclick="callApi('POST', '/admin/setup-cement-fuel-tabs', null, 'cement-setup-result')" style="background:#c8973a">Create Cement &amp; Fuel Tabs</button>
+    <div class="result" id="cement-setup-result"></div>
+    <br>
+    <p style="color:#555;font-size:14px;margin-top:8px">Step 2: Update prices when Ministry or NPC announces new prices</p>
+    <button onclick="callApi('POST', '/admin/fetch-cement-fuel', null, 'cement-result')" style="background:#c8973a">Update Cement &amp; Fuel Prices</button>
     <div class="result" id="cement-result"></div>
   </div>
 
