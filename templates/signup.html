@@ -203,7 +203,7 @@ input:focus,select:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(26,
 <!-- STATS -->
 <div class="stats">
   <div class="stats-grid">
-    <div><div class="stat-num" data-target="15">0</div><div class="stat-label">Commodities tracked weekly</div></div>
+    <div><div class="stat-num" data-target="15">0</div><div class="stat-label">Commodities across food, cement &amp; fuel</div></div>
     <div><div class="stat-num" data-target="5">0</div><div class="stat-label">Sierra Leone markets covered</div></div>
     <div><div class="stat-num">1.26M</div><div class="stat-label">Agricultural households in Sierra Leone</div></div>
     <div><div class="stat-num">6.7M</div><div class="stat-label">Total agricultural population</div></div>
@@ -228,7 +228,7 @@ input:focus,select:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(26,
 <section class="commodities">
   <div class="section-inner">
     <div class="section-label">What we track</div>
-    <div class="section-title">20 commodities, 5 markets</div>
+    <div class="section-title">20 commodities across 3 categories, 5 markets</div>
     <div class="commodity-grid">
       <div class="commodity-card"><div class="commodity-num">1</div><div class="commodity-emoji">🍚</div><div class="commodity-name">Rice</div></div>
       <div class="commodity-card"><div class="commodity-num">2</div><div class="commodity-emoji">🌿</div><div class="commodity-name">Cassava</div></div>
@@ -337,6 +337,10 @@ input:focus,select:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(26,
             </div>
           </div>
 
+          <!-- Food & Agriculture section -->
+          <div style="font-size:11px;font-weight:600;color:var(--green);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+            <span>🌾</span> Food &amp; Agriculture <span style="font-weight:400;color:var(--muted);font-size:10px;text-transform:none;letter-spacing:0">— WFP &amp; market informants</span>
+          </div>
           <!-- Visual crop grid -->
           <div class="crops-grid">
             <label class="crop-check" onclick="toggleCrop(this,event)"><input type="checkbox" value="rice"><div class="check-icon"></div><span style="font-size:10px;color:var(--muted);margin-right:3px">1</span>Rice</label>
@@ -355,13 +359,23 @@ input:focus,select:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(26,
             <label class="crop-check" onclick="toggleCrop(this,event)"><input type="checkbox" value="pepper"><div class="check-icon"></div><span style="font-size:10px;color:var(--muted);margin-right:3px">14</span>Pepper</label>
             <label class="crop-check" onclick="toggleCrop(this,event)"><input type="checkbox" value="sweet_potato"><div class="check-icon"></div><span style="font-size:10px;color:var(--muted);margin-right:3px">15</span>Sweet Potato</label>
           </div>
-          <div style="font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin:14px 0 8px">Construction &amp; Energy</div>
+          <!-- Cement section -->
+          <div style="font-size:11px;font-weight:600;color:var(--green);letter-spacing:.06em;text-transform:uppercase;margin:16px 0 8px;display:flex;align-items:center;gap:6px">
+            <span>🧱</span> Cement <span style="font-weight:400;color:var(--muted);font-size:10px;text-transform:none;letter-spacing:0">— Ministry of Trade prices</span>
+          </div>
           <div class="crops-grid">
-            <label class="crop-check" onclick="toggleCrop(this,event)"><input type="checkbox" value="cement_imported"><div class="check-icon"></div><span style="font-size:10px;color:var(--muted);margin-right:3px">16</span>🧱 Cement Imported 42.5R</label>
-            <label class="crop-check" onclick="toggleCrop(this,event)"><input type="checkbox" value="cement_local"><div class="check-icon"></div><span style="font-size:10px;color:var(--muted);margin-right:3px">17</span>🧱 Cement Local 32.5R</label>
-            <label class="crop-check" onclick="toggleCrop(this,event)"><input type="checkbox" value="petrol"><div class="check-icon"></div><span style="font-size:10px;color:var(--muted);margin-right:3px">18</span>⛽ Petrol</label>
-            <label class="crop-check" onclick="toggleCrop(this,event)"><input type="checkbox" value="diesel"><div class="check-icon"></div><span style="font-size:10px;color:var(--muted);margin-right:3px">19</span>⛽ Diesel</label>
-            <label class="crop-check" onclick="toggleCrop(this,event)"><input type="checkbox" value="kerosene"><div class="check-icon"></div><span style="font-size:10px;color:var(--muted);margin-right:3px">20</span>🛢 Kerosene</label>
+            <label class="crop-check" onclick="toggleCrop(this,event)"><input type="checkbox" value="cement_imported"><div class="check-icon"></div><span style="font-size:10px;color:var(--muted);margin-right:3px">16</span>Imported 42.5R</label>
+            <label class="crop-check" onclick="toggleCrop(this,event)"><input type="checkbox" value="cement_local"><div class="check-icon"></div><span style="font-size:10px;color:var(--muted);margin-right:3px">17</span>Local 32.5R</label>
+          </div>
+
+          <!-- Fuel section -->
+          <div style="font-size:11px;font-weight:600;color:var(--green);letter-spacing:.06em;text-transform:uppercase;margin:16px 0 8px;display:flex;align-items:center;gap:6px">
+            <span>⛽</span> Fuel &amp; Energy <span style="font-weight:400;color:var(--muted);font-size:10px;text-transform:none;letter-spacing:0">— NPC weekly prices</span>
+          </div>
+          <div class="crops-grid">
+            <label class="crop-check" onclick="toggleCrop(this,event)"><input type="checkbox" value="petrol"><div class="check-icon"></div><span style="font-size:10px;color:var(--muted);margin-right:3px">18</span>Petrol</label>
+            <label class="crop-check" onclick="toggleCrop(this,event)"><input type="checkbox" value="diesel"><div class="check-icon"></div><span style="font-size:10px;color:var(--muted);margin-right:3px">19</span>Diesel</label>
+            <label class="crop-check" onclick="toggleCrop(this,event)"><input type="checkbox" value="kerosene"><div class="check-icon"></div><span style="font-size:10px;color:var(--muted);margin-right:3px">20</span>Kerosene</label>
           </div>
         </div>        </div>
         <p id="crop-error" style="display:none;color:#c0392b;font-size:13px;margin-top:8px">Please select at least one crop above.</p>
