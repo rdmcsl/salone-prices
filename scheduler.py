@@ -133,6 +133,21 @@ def job_daily_reminders():
     job_renewal_reminders()
 
 
+def job_monthly_ministry_prices():
+    """
+    Runs on 1st of every month at 06:00.
+    Updates cement prices (Ministry of Trade) and fuel prices (NPC)
+    in Google Sheet automatically.
+    """
+    logger.info("=== Monthly Ministry of Trade / NPC price update ===")
+    try:
+        from ministry_prices import update_cement_and_fuel_in_sheet
+        success = update_cement_and_fuel_in_sheet()
+        logger.info("Ministry prices update: %s", "OK" if success else "FAILED")
+    except Exception as e:
+        logger.error("Ministry prices update failed: %s", e, exc_info=True)
+
+
 # ── Manual trigger (called from Flask admin route) ────────────────────────────
 
 def trigger_manual_blast() -> list[dict]:
@@ -163,6 +178,15 @@ def create_scheduler() -> BackgroundScheduler:
         CronTrigger(hour=8, minute=0, timezone=FREETOWN_TZ),
         id="daily_reminders",
         name="Trial and renewal reminders",
+        misfire_grace_time=3600,
+    )
+
+    # Monthly Ministry of Trade / NPC price update: 1st of every month at 06:00
+    scheduler.add_job(
+        job_monthly_ministry_prices,
+        CronTrigger(day=1, hour=6, minute=0, timezone=FREETOWN_TZ),
+        id="monthly_ministry_prices",
+        name="Ministry of Trade cement + NPC fuel prices",
         misfire_grace_time=3600,
     )
 

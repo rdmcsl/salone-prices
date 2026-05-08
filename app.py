@@ -127,6 +127,27 @@ def admin_blast_preview():
     return jsonify({"previews": previews, "total_active": len(get_active_subscribers())})
 
 
+@app.route("/admin/fetch-cement-fuel", methods=["POST"])
+def admin_fetch_cement_fuel():
+    """Fetch and write Ministry of Trade cement + NPC fuel prices to sheet."""
+    try:
+        from ministry_prices import update_cement_and_fuel_in_sheet, get_cement_prices_for_sheet, get_fuel_prices_for_sheet
+        cement = get_cement_prices_for_sheet()
+        fuel   = get_fuel_prices_for_sheet()
+        success = update_cement_and_fuel_in_sheet()
+        cement_meta = cement.pop("_meta", {})
+        fuel_meta   = fuel.pop("_meta", {})
+        return jsonify({
+            "status": "ok" if success else "error",
+            "cement_markets": list(list(cement.values())[0].keys()) if cement else [],
+            "fuel_types":     list(fuel.keys()),
+            "cement_source":  cement_meta.get("source"),
+            "fuel_source":    fuel_meta.get("source"),
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "reason": str(e)})
+
+
 @app.route("/admin/fetch-prices", methods=["POST"])
 def admin_fetch_prices():
     """Manually trigger WFP price fetch and update Google Sheet."""
@@ -332,6 +353,8 @@ def _build_whatsapp_reply(message: str, prices: dict) -> str:
         "7": "fish_bonga", "8": "onion", "9": "cooking_oil",
         "10": "salt", "11": "pepper", "12": "sweet_potato",
         "13": "eggs", "14": "chicken", "15": "meat",
+        "16": "cement_imported", "17": "cement_local",
+        "18": "petrol", "19": "diesel", "20": "kerosene",
     }
 
     # JOIN → subscribe
@@ -413,6 +436,11 @@ def _build_whatsapp_reply(message: str, prices: dict) -> str:
         "13 - \U0001f95a Eggs (per crate)\n"
         "14 - \U0001f414 Chicken (per kg)\n"
         "15 - \U0001f969 Meat / Beef (per kg)\n\n"
+        "16 - \U0001f9f1 Cement Imported 42.5R\n"
+        "17 - \U0001f9f1 Cement Local 32.5R\n"
+        "18 - \U000026fd Petrol\n"
+        "19 - \U000026fd Diesel\n"
+        "20 - \U0001f6e2 Kerosene\n\n"
         "Type WEEKLY for Monday morning alerts \U0001f4f2"
     )
 
@@ -481,6 +509,14 @@ def admin_panel():
     <p style="color:#555;font-size:14px">Pull latest rice, cassava, palm oil prices from WFP database → write to your Google Sheet automatically</p>
     <button onclick="callApi('POST', '/admin/fetch-prices', null, 'fetch-result')">Fetch WFP Prices Now</button>
     <div class="result" id="fetch-result"></div>
+  </div>
+
+  <div class="card">
+    <span class="badge" style="background:#c8973a;color:#333">Ministry of Trade</span>
+    <h3 style="margin:0 0 4px">Update Cement &amp; Fuel Prices</h3>
+    <p style="color:#555;font-size:14px">Write current Ministry of Trade cement prices + NPC fuel prices to your Google Sheet</p>
+    <button onclick="callApi('POST', '/admin/fetch-cement-fuel', null, 'cement-result')" style="background:#c8973a">Update Cement &amp; Fuel Now</button>
+    <div class="result" id="cement-result"></div>
   </div>
 
   <div class="card">
