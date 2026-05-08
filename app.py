@@ -138,6 +138,30 @@ def admin_setup_cement_fuel_tabs():
         return jsonify({"status": "error", "reason": str(e)})
 
 
+@app.route("/admin/fetch-fuel-prices", methods=["GET", "POST"])
+def admin_fetch_fuel_prices():
+    """Scrape GlobalPetrolPrices.com and update Petrol/Diesel/Kerosene tabs."""
+    try:
+        from ministry_prices import fetch_fuel_prices
+        from setup_cement_fuel_tabs import update_fuel_prices
+        fuel = fetch_fuel_prices()
+        meta = fuel.pop("_meta", {})
+        petrol   = int(fuel.get("petrol",   35))
+        diesel   = int(fuel.get("diesel",   40))
+        kerosene = int(fuel.get("kerosene", 41))
+        success = update_fuel_prices(petrol, diesel, kerosene)
+        return jsonify({
+            "status":   "ok" if success else "error",
+            "petrol":   f"NLE {petrol}/litre",
+            "diesel":   f"NLE {diesel}/litre",
+            "kerosene": f"NLE {kerosene}/litre",
+            "source":   meta.get("source", "Unknown"),
+            "date":     meta.get("date", ""),
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "reason": str(e)})
+
+
 @app.route("/admin/fetch-cement-fuel", methods=["POST"])
 def admin_fetch_cement_fuel():
     """Fetch and write Ministry of Trade cement + NPC fuel prices to sheet."""
@@ -520,6 +544,14 @@ def admin_panel():
     <p style="color:#555;font-size:14px">Pull latest rice, cassava, palm oil prices from WFP database → write to your Google Sheet automatically</p>
     <button onclick="callApi('POST', '/admin/fetch-prices', null, 'fetch-result')">Fetch WFP Prices Now</button>
     <div class="result" id="fetch-result"></div>
+  </div>
+
+  <div class="card">
+    <span class="badge" style="background:#2d6a9f;color:white">⛽ Auto Fuel Prices</span>
+    <h3 style="margin:0 0 4px">Fetch Live Fuel Prices</h3>
+    <p style="color:#555;font-size:14px">Scrape GlobalPetrolPrices.com for latest Sierra Leone petrol, diesel and kerosene prices → write to Google Sheet (runs automatically every Monday 6:30am)</p>
+    <button onclick="callApi('GET', '/admin/fetch-fuel-prices', null, 'fuel-result')" style="background:#2d6a9f">Fetch Fuel Prices Now</button>
+    <div class="result" id="fuel-result"></div>
   </div>
 
   <div class="card">

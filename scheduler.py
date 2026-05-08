@@ -133,19 +133,48 @@ def job_daily_reminders():
     job_renewal_reminders()
 
 
+def job_weekly_fuel_prices():
+    """
+    Runs every Monday at 06:30 — BEFORE the 07:00 SMS blast.
+    Scrapes GlobalPetrolPrices.com for latest Sierra Leone fuel prices
+    and writes them to the Petrol, Diesel, Kerosene Google Sheet tabs.
+    """
+    logger.info("=== Weekly fuel price scrape (GlobalPetrolPrices.com) ===")
+    try:
+        from ministry_prices import fetch_fuel_prices, update_fuel_in_sheet
+        fuel_prices = fetch_fuel_prices()
+        meta = fuel_prices.pop("_meta", {})
+        if fuel_prices:
+            petrol   = fuel_prices.get("petrol", 0)
+            diesel   = fuel_prices.get("diesel", 0)
+            kerosene = fuel_prices.get("kerosene", 0)
+            from setup_cement_fuel_tabs import update_fuel_prices
+            success = update_fuel_prices(
+                int(petrol) if petrol else 35,
+                int(diesel) if diesel else 40,
+                int(kerosene) if kerosene else 41
+            )
+            logger.info("Fuel prices updated: Petrol=%s Diesel=%s Kerosene=%s Source=%s",
+                       petrol, diesel, kerosene, meta.get("source"))
+        else:
+            logger.warning("No fuel prices scraped — sheet unchanged")
+    except Exception as e:
+        logger.error("Weekly fuel scrape failed: %s", e, exc_info=True)
+
+
 def job_monthly_ministry_prices():
     """
     Runs on 1st of every month at 06:00.
-    Updates cement prices (Ministry of Trade) and fuel prices (NPC)
-    in Google Sheet automatically.
+    Updates cement prices (Ministry of Trade) in Google Sheet.
+    Fuel prices are now handled weekly by job_weekly_fuel_prices().
     """
-    logger.info("=== Monthly Ministry of Trade / NPC price update ===")
+    logger.info("=== Monthly Ministry of Trade cement price update ===")
     try:
         from ministry_prices import update_cement_and_fuel_in_sheet
         success = update_cement_and_fuel_in_sheet()
-        logger.info("Ministry prices update: %s", "OK" if success else "FAILED")
+        logger.info("Ministry cement update: %s", "OK" if success else "FAILED")
     except Exception as e:
-        logger.error("Ministry prices update failed: %s", e, exc_info=True)
+        logger.error("Ministry cement update failed: %s", e, exc_info=True)
 
 
 # ── Manual trigger (called from Flask admin route) ────────────────────────────
@@ -181,12 +210,21 @@ def create_scheduler() -> BackgroundScheduler:
         misfire_grace_time=3600,
     )
 
-    # Monthly Ministry of Trade / NPC price update: 1st of every month at 06:00
+    # Weekly fuel prices: every Monday at 06:30 (30 mins before SMS blast)
+    scheduler.add_job(
+        job_weekly_fuel_prices,
+        CronTrigger(day_of_week="mon", hour=6, minute=30, timezone=FREETOWN_TZ),
+        id="weekly_fuel_prices",
+        name="GlobalPetrolPrices.com fuel price scrape",
+        misfire_grace_time=3600,
+    )
+
+    # Monthly Ministry of Trade cement update: 1st of every month at 06:00
     scheduler.add_job(
         job_monthly_ministry_prices,
         CronTrigger(day=1, hour=6, minute=0, timezone=FREETOWN_TZ),
         id="monthly_ministry_prices",
-        name="Ministry of Trade cement + NPC fuel prices",
+        name="Ministry of Trade cement prices",
         misfire_grace_time=3600,
     )
 

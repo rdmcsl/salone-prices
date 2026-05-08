@@ -73,51 +73,97 @@ DISTRICT_TO_MARKET = {
 
 # ── NPC fuel price scraper ────────────────────────────────────────────────────
 
-NPC_URL = "https://npc.gov.sl/fuel-prices"
+# GlobalPetrolPrices.com URLs for Sierra Leone (updated weekly)
+GPP_URLS = {
+    "petrol":   "https://www.globalpetrolprices.com/Sierra-Leone/gasoline_prices/",
+    "diesel":   "https://www.globalpetrolprices.com/Sierra-Leone/diesel_prices/",
+    "kerosene": "https://www.globalpetrolprices.com/Sierra-Leone/kerosene_prices/",
+}
+
+GPP_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Referer": "https://www.globalpetrolprices.com/",
+}
+
 
 def fetch_fuel_prices() -> dict:
     """
-    Fetches current fuel prices from NPC Sierra Leone website.
-    Returns dict with petrol, diesel, kerosene prices in NLe/litre.
+    Fetches current fuel prices from GlobalPetrolPrices.com weekly data.
     Falls back to cached prices if scraping fails.
+    Prices on the site are in SLL (old Leone) — we convert to NLE (divide by 1000).
     """
-    try:
-        resp = requests.get(NPC_URL, timeout=15,
-                           headers={"User-Agent": "SaloneMarket/1.0"})
-        resp.raise_for_status()
-        return _parse_npc_page(resp.text)
-    except Exception as e:
-        logger.warning("NPC fuel scrape failed: %s — using cached prices", e)
-        return _get_cached_fuel_prices()
-
-
-def _parse_npc_page(html: str) -> dict:
-    """Extract fuel prices from NPC website HTML."""
     prices = {}
-    patterns = {
-        "petrol":   r"[Pp]etrol[^\d]*(\d[\d,]+)",
-        "diesel":   r"[Dd]iesel[^\d]*(\d[\d,]+)",
-        "kerosene": r"[Kk]erosene[^\d]*(\d[\d,]+)",
-    }
-    for fuel, pattern in patterns.items():
-        match = re.search(pattern, html)
-        if match:
-            try:
-                price = int(match.group(1).replace(",", ""))
-                prices[fuel] = price
-                logger.info("NPC scraped %s: NLe %d/litre", fuel, price)
-            except ValueError:
-                pass
+    scraped_date = date.today().isoformat()
+
+    for fuel_type, url in GPP_URLS.items():
+        try:
+            resp = requests.get(url, headers=GPP_HEADERS, timeout=20)
+            resp.raise_for_status()
+            price_sll, price_date = _parse_gpp_page(resp.text, fuel_type)
+            if price_sll:
+                price_nle = round(price_sll / 1000, 1)  # convert SLL to NLE
+                prices[fuel_type] = price_nle
+                scraped_date = price_date or scraped_date
+                logger.info("GPP scraped %s: SLL %d → NLE %.1f/litre (%s)",
+                           fuel_type, price_sll, price_nle, price_date)
+        except Exception as e:
+            logger.warning("GPP scrape failed for %s: %s", fuel_type, e)
 
     if len(prices) >= 2:
         prices["_meta"] = {
-            "source": "NPC Sierra Leone",
-            "date": date.today().isoformat(),
+            "source": "GlobalPetrolPrices.com (Sierra Leone)",
+            "date": scraped_date,
+            "note": "SLL converted to NLE (divided by 1000)",
         }
         return prices
 
-    logger.warning("NPC page parse yielded insufficient data")
+    logger.warning("GPP scraping yielded insufficient data — using cached prices")
     return _get_cached_fuel_prices()
+
+
+def _parse_gpp_page(html: str, fuel_type: str) -> tuple:
+    """
+    Extract current price and date from GlobalPetrolPrices.com page.
+    Returns (price_in_SLL, date_string) or (None, None) if not found.
+    """
+    # Pattern 1: Look for "The current price of X in Sierra Leone is SLL XX,XXX"
+    patterns = [
+        r"Sierra Leone is SLL\s*([\d,]+(?:\.\d+)?)",
+        r"SLL\s*([\d,]+(?:\.\d+)?)\s*per li",
+        r"price[^\d]*([\d]{4,6}(?:,\d{3})*(?:\.\d+)?)\s*(?:SLL|Sierra)",
+        r'"price":\s*"?([\d.]+)"?',
+        r"([\d]{4,6}(?:,\d{3})*)\s*SLL",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, html, re.IGNORECASE)
+        if match:
+            try:
+                price_str = match.group(1).replace(",", "")
+                price = float(price_str)
+                if 1000 <= price <= 200000:  # sanity check — SLL range
+                    # Try to extract date
+                    date_match = re.search(
+                        r"(\d{2}-\w{3}-\d{4}|\d{4}-\d{2}-\d{2})", html
+                    )
+                    price_date = date_match.group(1) if date_match else None
+                    return int(price), price_date
+            except (ValueError, TypeError):
+                continue
+
+    # Pattern 2: Look for JSON-LD or data attributes
+    json_match = re.search(r'"price"\s*:\s*"?([\d.]+)"?', html)
+    if json_match:
+        try:
+            price = float(json_match.group(1))
+            if 1000 <= price <= 200000:
+                return int(price), None
+        except (ValueError, TypeError):
+            pass
+
+    return None, None
 
 
 def _get_cached_fuel_prices() -> dict:
