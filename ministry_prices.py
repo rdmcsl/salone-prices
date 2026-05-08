@@ -126,13 +126,13 @@ def _get_cached_fuel_prices() -> dict:
     Last updated: May 2026 (approximate — confirm with NPC)
     """
     return {
-        "petrol":   28,    # NLe per litre (approximate)
-        "diesel":   27,    # NLe per litre
-        "kerosene": 25,    # NLe per litre
+        "petrol":   35,   # NLe per litre — GlobalPetrolPrices 04 May 2026
+        "diesel":   40,   # NLe per litre — GlobalPetrolPrices 04 May 2026
+        "kerosene": 41,   # NLe per litre — GlobalPetrolPrices 04 May 2026
         "_meta": {
-            "source": "Cached — NPC Sierra Leone (update monthly)",
-            "date": date.today().isoformat(),
-            "note": "Visit npc.gov.sl to verify current prices",
+            "source": "GlobalPetrolPrices.com — 04 May 2026",
+            "date": "2026-05-04",
+            "note": "SLL 35000/40000/40790 converted to NLE (divided by 1000)",
         }
     }
 

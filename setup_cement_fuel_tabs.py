@@ -75,40 +75,39 @@ TABS = {
         ]
     },
     "Petrol": {
-        "label": "Petrol / Premium (per litre) — NPC national pump price",
+        "label": "Petrol / Gasoline (per litre) — NLE 35 as of 04 May 2026",
         "unit": "litre",
-        "source": "NPC Sierra Leone",
+        "source": "GlobalPetrolPrices.com — 04 May 2026",
         "rows": [
-            # Fuel is nationally priced — same across all markets
-            [TODAY, "freetown", 28, "litre", "NPC Sierra Leone"],
-            [TODAY, "bo",       28, "litre", "NPC Sierra Leone"],
-            [TODAY, "kenema",   28, "litre", "NPC Sierra Leone"],
-            [TODAY, "makeni",   28, "litre", "NPC Sierra Leone"],
-            [TODAY, "koidu",    28, "litre", "NPC Sierra Leone"],
+            ["2026-05-04", "freetown", 35, "litre", "GlobalPetrolPrices 04-May-2026"],
+            ["2026-05-04", "bo",       35, "litre", "GlobalPetrolPrices 04-May-2026"],
+            ["2026-05-04", "kenema",   35, "litre", "GlobalPetrolPrices 04-May-2026"],
+            ["2026-05-04", "makeni",   35, "litre", "GlobalPetrolPrices 04-May-2026"],
+            ["2026-05-04", "koidu",    35, "litre", "GlobalPetrolPrices 04-May-2026"],
         ]
     },
     "Diesel": {
-        "label": "Diesel (per litre) — NPC national pump price",
+        "label": "Diesel (per litre) — NLE 40 as of 04 May 2026",
         "unit": "litre",
-        "source": "NPC Sierra Leone",
+        "source": "GlobalPetrolPrices.com — 04 May 2026",
         "rows": [
-            [TODAY, "freetown", 27, "litre", "NPC Sierra Leone"],
-            [TODAY, "bo",       27, "litre", "NPC Sierra Leone"],
-            [TODAY, "kenema",   27, "litre", "NPC Sierra Leone"],
-            [TODAY, "makeni",   27, "litre", "NPC Sierra Leone"],
-            [TODAY, "koidu",    27, "litre", "NPC Sierra Leone"],
+            ["2026-05-04", "freetown", 40, "litre", "GlobalPetrolPrices 04-May-2026"],
+            ["2026-05-04", "bo",       40, "litre", "GlobalPetrolPrices 04-May-2026"],
+            ["2026-05-04", "kenema",   40, "litre", "GlobalPetrolPrices 04-May-2026"],
+            ["2026-05-04", "makeni",   40, "litre", "GlobalPetrolPrices 04-May-2026"],
+            ["2026-05-04", "koidu",    40, "litre", "GlobalPetrolPrices 04-May-2026"],
         ]
     },
     "Kerosene": {
-        "label": "Kerosene (per litre) — NPC national pump price",
+        "label": "Kerosene (per litre) — NLE 41 as of 04 May 2026",
         "unit": "litre",
-        "source": "NPC Sierra Leone",
+        "source": "GlobalPetrolPrices.com — 04 May 2026",
         "rows": [
-            [TODAY, "freetown", 25, "litre", "NPC Sierra Leone"],
-            [TODAY, "bo",       25, "litre", "NPC Sierra Leone"],
-            [TODAY, "kenema",   25, "litre", "NPC Sierra Leone"],
-            [TODAY, "makeni",   25, "litre", "NPC Sierra Leone"],
-            [TODAY, "koidu",    25, "litre", "NPC Sierra Leone"],
+            ["2026-05-04", "freetown", 41, "litre", "GlobalPetrolPrices 04-May-2026"],
+            ["2026-05-04", "bo",       41, "litre", "GlobalPetrolPrices 04-May-2026"],
+            ["2026-05-04", "kenema",   41, "litre", "GlobalPetrolPrices 04-May-2026"],
+            ["2026-05-04", "makeni",   41, "litre", "GlobalPetrolPrices 04-May-2026"],
+            ["2026-05-04", "koidu",    41, "litre", "GlobalPetrolPrices 04-May-2026"],
         ]
     },
 }
