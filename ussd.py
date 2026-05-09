@@ -61,7 +61,7 @@ def handle_ussd(
     if text == "":
         return (
             "CON Welcome to SaloneMarket\n"
-            "Weekly crop prices by SMS\n\n"
+            "Food, Cement & Fuel prices\n\n"
             "1. Subscribe\n"
             "2. Unsubscribe\n"
             "3. Change my crops"
