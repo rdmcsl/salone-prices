@@ -715,6 +715,48 @@ def send_test_sms():
     except Exception as e:
         return jsonify({"status": "error", "reason": str(e)})
 
+# ─────────────────────────────────────────────────────────────────────────────
+# ADD THESE TWO ROUTES TO app.py
+# Paste them just before the "# ── Health check" section at the bottom
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route("/admin/whatsapp-preview", methods=["GET"])
+def admin_whatsapp_preview():
+    """Preview WhatsApp messages for first 3 subscribers without sending."""
+    from sheets import get_latest_prices, get_active_subscribers
+    from sms import format_whatsapp_food, format_whatsapp_fuel, format_whatsapp_cement
+    prices  = get_latest_prices()
+    subs    = get_active_subscribers()[:3]
+    previews = []
+    for sub in subs:
+        district = sub.get("district", "Western Area") or "Western Area"
+        plan     = sub.get("plan", "free")
+        previews.append({
+            "phone":    sub.get("phone"),
+            "name":     sub.get("name"),
+            "district": district,
+            "plan":     plan,
+            "food_msg": format_whatsapp_food(sub.get("name", ""), district, prices, plan),
+        })
+    return jsonify({
+        "previews":     previews,
+        "total_active": len(get_active_subscribers()),
+    })
+
+
+@app.route("/admin/trigger-whatsapp-blast", methods=["POST"])
+@_require_admin
+def admin_trigger_whatsapp_blast():
+    """Manually fires the weekly WhatsApp blast to all active subscribers."""
+    from sheets import get_latest_prices
+    from sms import run_weekly_whatsapp_blast
+    prices  = get_latest_prices()
+    results = run_weekly_whatsapp_blast(prices)
+    return jsonify({
+        "sent":   sum(1 for r in results if r.get("status") == "success"),
+        "failed": sum(1 for r in results if r.get("status") == "failed"),
+        "detail": results[:5],
+    })
 
 # ── Health check ──────────────────────────────────────────────────────────────
 
