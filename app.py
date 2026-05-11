@@ -715,6 +715,22 @@ def send_test_sms():
     except Exception as e:
         return jsonify({"status": "error", "reason": str(e)})
 
+@app.route("/admin/whatsapp-preview", methods=["GET"])
+def admin_whatsapp_preview():
+    from sheets import get_latest_prices, get_active_subscribers
+    from sms import format_whatsapp_food
+    prices  = get_latest_prices()
+    subs    = get_active_subscribers()[:3]
+    previews = []
+    for sub in subs:
+        district = sub.get("district", "Western Area") or "Western Area"
+        plan     = sub.get("plan", "free")
+        previews.append({
+            "phone":    sub.get("phone"),
+            "district": district,
+            "food_msg": format_whatsapp_food(sub.get("name",""), district, prices, plan),
+        })
+    return jsonify({"previews": previews, "total_active": len(get_active_subscribers())})
 
 # ── Health check ──────────────────────────────────────────────────────────────
 
