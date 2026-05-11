@@ -230,7 +230,49 @@ def run_weekly_blast(prices: dict) -> list[dict]:
     results = send_bulk_sms(subscribers, build_message)
     return results
 
+def _px(prices, crop, district):
+    d = prices.get(crop, {})
+    if isinstance(d, dict):
+        return d.get(district) or d.get("Western Area") or d.get("freetown") or "—"
+    return d or "—"
 
+def format_whatsapp_food(name, district, prices, plan="free"):
+    from datetime import date
+    today = date.today().strftime("%-d %b %Y")
+    first = name.split()[0] if name else "there"
+    is_pro = plan in ("pro", "biz", "individual")
+    lines = [
+        f"👋 Hi {first}!",
+        "",
+        "📊 *SL Market Tracker — Food & Agriculture*",
+        f"📅 Week of {today} · {district}",
+        "",
+        "🌾 *FOOD PRICES (retail)*",
+        f"Rice local 50kg.......NLe {_px(prices, 'rice_local', district)}",
+        f"Rice imported 50kg....NLe {_px(prices, 'rice_imported', district)}",
+        f"Palm oil 1L..............NLe {_px(prices, 'palm_oil', district)}",
+        f"Sugar 50kg...............NLe {_px(prices, 'sugar', district)}",
+        f"Onion 1kg.................NLe {_px(prices, 'onion', district)}",
+    ]
+    if is_pro:
+        lines += [
+            f"Tomato 1kg................NLe {_px(prices, 'tomato', district)}",
+            f"Dried fish 1kg............NLe {_px(prices, 'dried_fish', district)}",
+            f"Groundnut oil 1L.........NLe {_px(prices, 'groundnut_oil', district)}",
+            f"Wheat flour 50kg.........NLe {_px(prices, 'wheat_flour', district)}",
+            f"Cassava 50kg..............NLe {_px(prices, 'cassava', district)}",
+        ]
+    else:
+        lines.append("_(Upgrade to Pro for all 15 items)_")
+    lines += [
+        "",
+        f"📌 _Retail prices · {district}_",
+        "🔗 trade.gov.sl/prices",
+        "",
+        "_↑ up · ↓ down · — stable vs last week_",
+        "_Reply STOP to unsubscribe_",
+    ]
+    return "\n".join(lines)
 # ── Logging ──────────────────────────────────────────────────────────────────
 
 def _log_results(results: list[dict]) -> None:
