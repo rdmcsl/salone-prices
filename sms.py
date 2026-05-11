@@ -5,6 +5,7 @@ Handles:
   - Formatting the weekly price alert SMS (fits in 160 chars)
   - Sending bulk SMS to all active subscribers via Africa's Talking
   - Sending individual confirmation / notification SMS
+  - Weekly WhatsApp digest (Food, Fuel, Cement)
   - Logging send results to a dated CSV in logs/
 """
 
@@ -28,16 +29,18 @@ logger = logging.getLogger(__name__)
 try:
     africastalking.initialize(AT_USERNAME, AT_API_KEY)
     _sms = africastalking.SMS
+    _whatsapp = africastalking.WhatsApp
 except Exception as e:
     logger.warning("AT not initialized: %s", e)
     _sms = None
+    _whatsapp = None
 
 
-# ── Message formatting ───────────────────────────────────────────────────────
+# ── SMS Message formatting ───────────────────────────────────────────────────
 
 def format_price_sms(prices: dict, subscriber_crops: list[str]) -> str:
     """
-    Builds a single SMS (≤160 chars) for the given subscriber's chosen crops.
+    Builds a single SMS (<=160 chars) for the given subscriber's chosen crops.
 
     Example output:
         SaloneMarket 28 Apr
@@ -92,7 +95,7 @@ def format_price_sms(prices: dict, subscriber_crops: list[str]) -> str:
 
     # Trim aggressively if over 160 chars
     if len(msg) > 160:
-        lines_trimmed = lines[:3] + [lines[-1]]  # keep header + 2 crops + footer
+        lines_trimmed = lines[:3] + [lines[-1]]
         msg = "\n".join(lines_trimmed)
 
     return msg[:160]
@@ -121,20 +124,17 @@ def format_trial_ending_sms(name: str, days_left: int) -> str:
     )[:160]
 
 
-# ── Sending ──────────────────────────────────────────────────────────────────
+# ── SMS Sending ──────────────────────────────────────────────────────────────
 
 def send_sms(phone: str, message: str) -> dict:
     """
     Sends a single SMS via Africa's Talking (Sierra Leone numbers)
     or Twilio (international/US numbers).
-    Phone must be in international format: +23276XXXXXXX or +1XXXXXXXXXX
     """
-    # Use Twilio for non-Sierra Leone numbers (US, UK, diaspora)
     is_salone = phone.startswith("+232")
     if not is_salone:
         return _send_via_twilio(phone, message)
 
-    # Use Africa's Talking for Sierra Leone numbers
     if _sms is None:
         logger.warning("AT SMS skipped (not initialized): %s", phone)
         return _send_via_twilio(phone, message)
@@ -167,17 +167,7 @@ def _send_via_twilio(phone: str, message: str) -> dict:
 
 
 def send_bulk_sms(recipients: list[dict], message_fn) -> list[dict]:
-    """
-    Sends personalised SMS to a list of subscriber dicts.
-    message_fn(subscriber) → str   (called per subscriber so crops can differ)
-
-    Returns a list of result dicts:
-        [{"phone": ..., "status": "success"|"failed", "message": ..., "response": ...}, ...]
-
-    Africa's Talking supports batching up to 1,000 recipients in one API call,
-    but because each subscriber may want different crops we send per-subscriber.
-    For pure broadcast (identical message) you can batch – see send_broadcast().
-    """
+    """Sends personalised SMS to a list of subscriber dicts."""
     results = []
     for sub in recipients:
         phone = sub.get("phone", "")
@@ -196,10 +186,7 @@ def send_bulk_sms(recipients: list[dict], message_fn) -> list[dict]:
 
 
 def send_broadcast(phones: list[str], message: str) -> dict:
-    """
-    Sends the SAME message to up to 1,000 numbers in a single API call.
-    Use for association-level identical blasts (e.g. sponsored alerts).
-    """
+    """Sends the SAME message to up to 1,000 numbers in a single API call."""
     try:
         response = _sms.send(message, phones, sender_id=AT_SENDER_ID)
         logger.info("Broadcast sent to %d numbers", len(phones))
@@ -209,7 +196,7 @@ def send_broadcast(phones: list[str], message: str) -> dict:
         return {"error": str(exc)}
 
 
-# ── Weekly blast entry point ─────────────────────────────────────────────────
+# ── Weekly SMS blast entry point ─────────────────────────────────────────────
 
 def run_weekly_blast(prices: dict) -> list[dict]:
     """
@@ -224,10 +211,193 @@ def run_weekly_blast(prices: dict) -> list[dict]:
     def build_message(sub: dict) -> str:
         crops = [c.strip() for c in str(sub.get("crops", "")).split(",") if c.strip()]
         if not crops:
-            crops = ["rice", "cassava", "palm_oil"]  # default crops
+            crops = ["rice", "cassava", "palm_oil"]
         return format_price_sms(prices, crops)
 
     results = send_bulk_sms(subscribers, build_message)
+    return results
+
+
+# ── WhatsApp message formatting ──────────────────────────────────────────────
+
+def _px(prices: dict, crop: str, district: str):
+    """Get price for a crop in a district with fallbacks."""
+    d = prices.get(crop, {})
+    if isinstance(d, dict):
+        return d.get(district) or d.get("Western Area") or d.get("freetown") or "—"
+    return d or "—"
+
+
+def format_whatsapp_food(name: str, district: str, prices: dict, plan: str = "free") -> str:
+    """Formats the weekly Food & Agriculture WhatsApp digest."""
+    today = date.today().strftime("%-d %b %Y")
+    first = name.split()[0] if name else "there"
+    is_pro = plan in ("pro", "biz", "individual")
+
+    lines = [
+        f"👋 Hi {first}!",
+        "",
+        "📊 *SL Market Tracker — Food & Agriculture*",
+        f"📅 Week of {today} · {district}",
+        "",
+        "🌾 *FOOD PRICES (retail)*",
+        f"Rice local 50kg.......NLe {_px(prices, 'rice_local', district)}",
+        f"Rice imported 50kg....NLe {_px(prices, 'rice_imported', district)}",
+        f"Palm oil 1L..............NLe {_px(prices, 'palm_oil', district)}",
+        f"Sugar 50kg...............NLe {_px(prices, 'sugar', district)}",
+        f"Onion 1kg.................NLe {_px(prices, 'onion', district)}",
+    ]
+
+    if is_pro:
+        lines += [
+            f"Tomato 1kg................NLe {_px(prices, 'tomato', district)}",
+            f"Dried fish 1kg............NLe {_px(prices, 'dried_fish', district)}",
+            f"Groundnut oil 1L.........NLe {_px(prices, 'groundnut_oil', district)}",
+            f"Wheat flour 50kg.........NLe {_px(prices, 'wheat_flour', district)}",
+            f"Cassava 50kg..............NLe {_px(prices, 'cassava', district)}",
+        ]
+    else:
+        lines.append("_(Upgrade to Pro for all 15 items)_")
+
+    lines += [
+        "",
+        f"📌 _Retail prices · {district}_",
+        "🔗 trade.gov.sl/prices",
+        "",
+        "_↑ up · ↓ down · — stable vs last week_",
+        "_Reply STOP to unsubscribe_",
+    ]
+    return "\n".join(lines)
+
+
+def format_whatsapp_fuel(name: str, district: str, prices: dict) -> str:
+    """Formats the weekly Fuel & Energy WhatsApp digest."""
+    today = date.today().strftime("%-d %b %Y")
+    first = name.split()[0] if name else "there"
+
+    return "\n".join([
+        f"👋 Hi {first}!",
+        "",
+        "⛽ *SL Market Tracker — Fuel & Energy*",
+        f"📅 Week of {today} · {district}",
+        "",
+        "🚗 *PUMP PRICES (per litre)*",
+        f"Petrol (PMS).......NLe {_px(prices, 'petrol', district)}",
+        f"Diesel (AGO).......NLe {_px(prices, 'diesel', district)}",
+        f"Kerosene (DPK)...NLe {_px(prices, 'kerosene', district)}",
+        "",
+        f"📌 _NPA regulated pump prices · {district}_",
+        "🔗 trade.gov.sl/prices",
+        "",
+        "_↑ up · ↓ down · — stable vs last week_",
+        "_Reply STOP to unsubscribe_",
+    ])
+
+
+def format_whatsapp_cement(name: str, district: str, prices: dict) -> str:
+    """Formats the weekly Cement & Construction WhatsApp digest."""
+    today = date.today().strftime("%-d %b %Y")
+    first = name.split()[0] if name else "there"
+
+    return "\n".join([
+        f"👋 Hi {first}!",
+        "",
+        "🏗 *SL Market Tracker — Cement & Construction*",
+        f"📅 Week of {today} · {district}",
+        "",
+        "💰 *WHOLESALE — national (per 50kg bag)*",
+        f"Imported 42.5R......NLe {prices.get('cement_imported_wholesale', '175')}",
+        f"Local 32.5R...........NLe {prices.get('cement_local_wholesale', '165')}",
+        "",
+        f"🏪 *RETAIL · {district} (per 50kg bag)*",
+        f"Imported 42.5R......NLe {_px(prices, 'cement_imported', district)}",
+        f"Local 32.5R...........NLe {_px(prices, 'cement_local', district)}",
+        "",
+        "📌 _Ministry of Trade & Industry directive_",
+        "🔗 trade.gov.sl/prices",
+        "",
+        "_↑ up · ↓ down · — stable vs last week_",
+        "_Reply STOP to unsubscribe_",
+    ])
+
+
+# ── WhatsApp sender ──────────────────────────────────────────────────────────
+
+def send_whatsapp_msg(phone: str, message: str) -> dict:
+    """
+    Sends a single WhatsApp message via Africa's Talking SDK.
+    Phone must be in E.164 format: +23276XXXXXXX
+    """
+    try:
+        response = _whatsapp.send(
+            message=message,
+            to=[phone],
+        )
+        logger.info("WhatsApp sent to %s", phone)
+        return response
+    except Exception as exc:
+        logger.error("WhatsApp failed to %s: %s", phone, exc)
+        return {"error": str(exc)}
+
+
+# ── Weekly WhatsApp blast ────────────────────────────────────────────────────
+
+def run_weekly_whatsapp_blast(prices: dict) -> list[dict]:
+    """
+    Sends personalised WhatsApp digests to all active subscribers every Monday.
+    Each subscriber gets messages for their subscribed categories:
+      - Food  → all plans
+      - Fuel  → pro / biz only
+      - Cement → pro / biz only
+    """
+    subscribers = get_active_subscribers()
+    if not subscribers:
+        logger.warning("No active subscribers — WhatsApp blast skipped")
+        return []
+
+    results = []
+    for sub in subscribers:
+        phone    = sub.get("phone", "")
+        name     = sub.get("name", "")
+        district = sub.get("district", "Western Area") or "Western Area"
+        plan     = sub.get("plan", "free")
+        cats_raw = str(sub.get("categories", "food"))
+        cats     = [c.strip() for c in cats_raw.split(",")]
+
+        if not phone:
+            continue
+
+        # Food — all plans
+        if "food" in cats or not cats:
+            msg  = format_whatsapp_food(name, district, prices, plan)
+            resp = send_whatsapp_msg(phone, msg)
+            results.append({
+                "phone": phone, "category": "food",
+                "status": "success" if "error" not in resp else "failed",
+            })
+
+        # Fuel — pro/biz only
+        if "fuel" in cats and plan in ("pro", "biz"):
+            msg  = format_whatsapp_fuel(name, district, prices)
+            resp = send_whatsapp_msg(phone, msg)
+            results.append({
+                "phone": phone, "category": "fuel",
+                "status": "success" if "error" not in resp else "failed",
+            })
+
+        # Cement — pro/biz only
+        if "cement" in cats and plan in ("pro", "biz"):
+            msg  = format_whatsapp_cement(name, district, prices)
+            resp = send_whatsapp_msg(phone, msg)
+            results.append({
+                "phone": phone, "category": "cement",
+                "status": "success" if "error" not in resp else "failed",
+            })
+
+    _log_results(results)
+    sent   = sum(1 for r in results if r["status"] == "success")
+    failed = sum(1 for r in results if r["status"] == "failed")
+    logger.info("WhatsApp blast complete: %d sent, %d failed", sent, failed)
     return results
 
 
