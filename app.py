@@ -262,7 +262,20 @@ def signup():
     except Exception as sms_err:
         logger.warning("Welcome SMS failed: %s", sms_err)
     return jsonify({"status": "ok", "message": "Subscribed successfully"})
-
+@app.route("/debug-sheets", methods=["GET"])
+def debug_sheets():
+    try:
+        import os, json
+        creds_raw = os.getenv("GOOGLE_CREDS_JSON", "").strip()
+        info = json.loads(creds_raw)
+        return jsonify({
+            "status": "json_parsed",
+            "project_id": info.get("project_id"),
+            "client_email": info.get("client_email"),
+            "private_key_starts": info.get("private_key","")[:30],
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "reason": str(e)})
 @app.route("/debug", methods=["GET"])
 def debug_env():
     from config import PRICES_SHEET_ID, SUBSCRIBERS_SHEET_ID, AT_USERNAME, GOOGLE_CREDS_CONTENT
