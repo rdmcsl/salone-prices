@@ -284,6 +284,18 @@ def debug_sheets2():
         return jsonify({"status": "connected", "email": client.auth.service_account_email})
     except Exception as e:
         return jsonify({"status": "error", "reason": str(e)})
+@app.route("/debug-sheets3", methods=["GET"])
+def debug_sheets3():
+    try:
+        from sheets import _get_client
+        from config import SUBSCRIBERS_SHEET_ID
+        client = _get_client()
+        sheet = client.open_by_key(SUBSCRIBERS_SHEET_ID)
+        worksheets = [ws.title for ws in sheet.worksheets()]
+        return jsonify({"status": "connected", "worksheets": worksheets})
+    except Exception as e:
+        return jsonify({"status": "error", "reason": str(e)})
+
 @app.route("/debug", methods=["GET"])
 def debug_env():
     from config import PRICES_SHEET_ID, SUBSCRIBERS_SHEET_ID, AT_USERNAME, GOOGLE_CREDS_CONTENT
