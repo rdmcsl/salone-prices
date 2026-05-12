@@ -322,6 +322,12 @@ def format_whatsapp_cement(name: str, district: str, prices: dict) -> str:
 # ── WhatsApp sender ──────────────────────────────────────────────────────────
 
 def send_whatsapp_msg(phone: str, message: str) -> dict:
+    import requests
+    # Ensure E.164 format
+    phone = str(phone).strip().replace(" ", "").replace("-", "")
+    if not phone.startswith("+"):
+        phone = "+" + phone
+    url = "https://api.sandbox.africastalking.com/version1/messaging/whatsapp"
     """
     Sends a single WhatsApp message via Africa's Talking REST API.
     The AT Python SDK does not support WhatsApp — we call the API directly.
