@@ -389,27 +389,30 @@ def run_weekly_whatsapp_blast(prices: dict) -> list[dict]:
             msg  = format_whatsapp_food(name, district, prices, plan)
             resp = send_whatsapp_msg(phone, msg)
             results.append({
-                "phone": phone, "category": "food",
-                "status": "success" if "error" not in resp else "failed",
-            })
+    "phone": phone, "category": "food",
+    "status": "success" if "error" not in resp else "failed",
+    "error": resp.get("error", ""),
+})
 
         # Fuel — pro/biz only
         if "fuel" in cats and plan in ("pro", "biz"):
             msg  = format_whatsapp_fuel(name, district, prices)
             resp = send_whatsapp_msg(phone, msg)
-            results.append({
-                "phone": phone, "category": "fuel",
-                "status": "success" if "error" not in resp else "failed",
-            })
+           results.append({
+    "phone": phone, "category": "food",
+    "status": "success" if "error" not in resp else "failed",
+    "error": resp.get("error", ""),
+})
 
         # Cement — pro/biz only
         if "cement" in cats and plan in ("pro", "biz"):
             msg  = format_whatsapp_cement(name, district, prices)
             resp = send_whatsapp_msg(phone, msg)
             results.append({
-                "phone": phone, "category": "cement",
-                "status": "success" if "error" not in resp else "failed",
-            })
+    "phone": phone, "category": "food",
+    "status": "success" if "error" not in resp else "failed",
+    "error": resp.get("error", ""),
+})
 
     _log_results(results)
     sent   = sum(1 for r in results if r["status"] == "success")
