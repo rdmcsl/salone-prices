@@ -29,11 +29,9 @@ logger = logging.getLogger(__name__)
 try:
     africastalking.initialize(AT_USERNAME, AT_API_KEY)
     _sms = africastalking.SMS
-    _whatsapp = africastalking.WhatsApp
 except Exception as e:
     logger.warning("AT not initialized: %s", e)
     _sms = None
-    _whatsapp = None
 
 
 # ── SMS Message formatting ───────────────────────────────────────────────────
@@ -325,16 +323,29 @@ def format_whatsapp_cement(name: str, district: str, prices: dict) -> str:
 
 def send_whatsapp_msg(phone: str, message: str) -> dict:
     """
-    Sends a single WhatsApp message via Africa's Talking SDK.
+    Sends a single WhatsApp message via Africa's Talking REST API.
+    The AT Python SDK does not support WhatsApp — we call the API directly.
     Phone must be in E.164 format: +23276XXXXXXX
     """
+    import requests
+    url = "https://api.sandbox.africastalking.com/version1/messaging/whatsapp"
+    if os.getenv("NODE_ENV", "sandbox") == "production":
+        url = "https://api.africastalking.com/version1/messaging/whatsapp"
     try:
-        response = _whatsapp.send(
-            message=message,
-            to=[phone],
-        )
-        logger.info("WhatsApp sent to %s", phone)
-        return response
+        payload = {
+            "username": AT_USERNAME,
+            "to":       phone,
+            "from":     os.getenv("AT_WHATSAPP_SENDER", ""),
+            "message":  message,
+        }
+        headers = {
+            "apiKey":       AT_API_KEY,
+            "Accept":       "application/json",
+            "Content-Type": "application/json",
+        }
+        resp = requests.post(url, json=payload, headers=headers, timeout=10)
+        logger.info("WhatsApp sent to %s: %s", phone, resp.status_code)
+        return resp.json()
     except Exception as exc:
         logger.error("WhatsApp failed to %s: %s", phone, exc)
         return {"error": str(exc)}
