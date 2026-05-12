@@ -411,15 +411,17 @@ def run_weekly_whatsapp_blast(prices: dict) -> list[dict]:
     logger.info("WhatsApp blast complete: %d sent, %d failed", sent, failed)
     return results
 
-
-# ── Logging ──────────────────────────────────────────────────────────────────
-
 def _log_results(results: list[dict]) -> None:
     """Writes send results to a dated CSV file in logs/."""
     os.makedirs(LOG_DIR, exist_ok=True)
     filename = os.path.join(LOG_DIR, f"sms_log_{date.today().isoformat()}.csv")
+    if not results:
+        return
+    fieldnames = list(results[0].keys())
     with open(filename, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["phone", "status", "message", "response"])
+        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(results)
     logger.info("SMS log written to %s", filename)
+# ── Logging ──────────────────────────────────────────────────────────────────
+
