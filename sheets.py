@@ -25,7 +25,9 @@ Sheet layout expected:
       I: association  (association name or blank)
 """
 
+import json
 import logging
+import os
 from datetime import date, datetime
 from typing import Optional
 
@@ -46,43 +48,42 @@ SCOPES = [
 
 
 def _get_client() -> gspread.Client:
-    import json as _json
-    from config import GOOGLE_CREDS_CONTENT
-    if GOOGLE_CREDS_CONTENT:
-        # Load from environment variable (Railway production)
-        # Fix escaped newlines in private key if needed
-        creds_str = GOOGLE_CREDS_CONTENT.strip()
+    """
+    Returns an authenticated gspread client.
+    Reads credentials from GOOGLE_CREDS_JSON env var (JSON string)
+    or falls back to GOOGLE_CREDS_CONTENT, then to a local file.
+    """
+    # Option 1: GOOGLE_CREDS_JSON env var contains raw JSON string
+    creds_raw = os.getenv("GOOGLE_CREDS_JSON", "").strip()
+    if creds_raw.startswith("{"):
         try:
-            info = _json.loads(creds_str)
-        except _json.JSONDecodeError:
-            # Try fixing common issues with escaped characters
-            creds_str = creds_str.replace("\\n", "\n")
-            info = _json.loads(creds_str)
-        # Ensure private key newlines are correct
-        if "private_key" in info:
-            info["private_key"] = info["private_key"].replace("\\n", "\n")
-        creds = Credentials.from_service_account_info(info, scopes=SCOPES)
-    else:
-        # Load from file (local development)
-        import json, os
-_creds_raw = os.getenv("GOOGLE_CREDS_JSON", "")
-if _creds_raw.strip().startswith("{"):
-    import json as _json, os as _os
-_creds_raw = _os.getenv("GOOGLE_CREDS_JSON", "")
-if _creds_raw.strip().startswith("{"):
-    creds = Credentials.from_service_account_info(_json.loads(_creds_raw), scopes=SCOPES)
-else:
-    creds = Credentials.from_service_account_file(_creds_raw, scopes=SCOPES)
+            info = json.loads(creds_raw)
+            if "private_key" in info:
+                info["private_key"] = info["private_key"].replace("\\n", "\n")
+            creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+            return gspread.authorize(creds)
+        except Exception as e:
+            logger.warning("GOOGLE_CREDS_JSON parse failed: %s", e)
 
+    # Option 2: GOOGLE_CREDS_CONTENT env var (legacy)
+    creds_content = os.getenv("GOOGLE_CREDS_CONTENT", "").strip()
+    if creds_content.startswith("{"):
+        try:
+            info = json.loads(creds_content)
+            if "private_key" in info:
+                info["private_key"] = info["private_key"].replace("\\n", "\n")
+            creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+            return gspread.authorize(creds)
+        except Exception as e:
+            logger.warning("GOOGLE_CREDS_CONTENT parse failed: %s", e)
+
+    # Option 3: Fall back to file path (local development)
+    creds_file = creds_raw or "google_credentials.json"
+    creds = Credentials.from_service_account_file(creds_file, scopes=SCOPES)
     return gspread.authorize(creds)
 
 
 # ── Prices ───────────────────────────────────────────────────────────────────
-#
-# Simple sheet format (single "Prices" tab):
-# | crop | freetown | bo | kenema | makeni | koidu | date |
-# One row per crop — just update numbers each week!
-#
 
 def get_latest_prices(crops: Optional[list] = None) -> dict:
     """
@@ -90,13 +91,6 @@ def get_latest_prices(crops: Optional[list] = None) -> dict:
     | crop | freetown | bo | kenema | makeni | koidu | date |
 
     One row per crop. Just update the numbers each week!
-
-    Returns:
-        {
-          "rice": {"freetown": 460, "bo": 420, "kenema": 410},
-          "cassava": {"freetown": 95, "bo": 80},
-          ...
-        }
     """
     client = _get_client()
     sheet = client.open_by_key(PRICES_SHEET_ID)
@@ -154,15 +148,11 @@ def get_latest_prices(crops: Optional[list] = None) -> dict:
 
 
 def get_best_market(crop_key: str, prices: dict) -> Optional[tuple]:
-    """
-    Returns (market_key, price) with the highest price for a crop.
-    Higher price = better deal for a farmer selling that crop.
-    """
+    """Returns (market_key, price) with the highest price for a crop."""
     crop_data = prices.get(crop_key, {})
     if not crop_data:
         return None
-    best = max(crop_data.items(), key=lambda x: x[1])
-    return best  # (market_key, price)
+    return max(crop_data.items(), key=lambda x: x[1])
 
 
 # ── Subscribers ──────────────────────────────────────────────────────────────
@@ -194,7 +184,7 @@ def get_active_subscribers() -> list[dict]:
                 if weeks_in < int(sub.get("free_trial_weeks", 4)):
                     active.append(sub)
             except ValueError:
-                pass  # malformed date – skip
+                pass
     logger.info("%d active/trial subscribers", len(active))
     return active
 
@@ -207,31 +197,20 @@ def add_subscriber(
     plan: str = "individual",
     association: str = "",
 ) -> bool:
-    """
-    Appends a new subscriber row. Returns True on success.
-    Called by the USSD handler after successful registration.
-    """
+    """Appends a new subscriber row. Returns True on success."""
     client = _get_client()
     sheet = client.open_by_key(SUBSCRIBERS_SHEET_ID)
     ws = sheet.worksheet("Subscribers")
 
-    # Check for duplicate phone
-    existing = ws.col_values(1)  # column A = phone
+    existing = ws.col_values(1)
     if phone in existing:
         logger.warning("Subscriber already exists: %s", phone)
         return False
 
     today_str = date.today().isoformat()
     row = [
-        phone,
-        name,
-        district,
-        ",".join(crops),
-        plan,
-        "trial",        # new subscribers start on trial
-        today_str,
-        "",             # paid_until – blank until payment confirmed
-        association,
+        phone, name, district, ",".join(crops),
+        plan, "trial", today_str, "", association,
     ]
     ws.append_row(row, value_input_option="USER_ENTERED")
     logger.info("Added subscriber: %s (%s)", phone, district)
@@ -239,28 +218,20 @@ def add_subscriber(
 
 
 def update_subscriber_status(phone: str, status: str, paid_until: str = "") -> bool:
-    """
-    Updates status (and optionally paid_until) for a given phone number.
-    Called by the Orange Money payment webhook.
-    """
+    """Updates status for a given phone number."""
     client = _get_client()
     sheet = client.open_by_key(SUBSCRIBERS_SHEET_ID)
     ws = sheet.worksheet("Subscribers")
 
     phones = ws.col_values(1)
     try:
-        row_index = phones.index(phone) + 1  # gspread is 1-indexed
+        row_index = phones.index(phone) + 1
     except ValueError:
         logger.error("Phone not found for status update: %s", phone)
         return False
 
-    ws.update_cell(row_index, 6, status)       # column F = status
+    ws.update_cell(row_index, 6, status)
     if paid_until:
-        ws.update_cell(row_index, 8, paid_until)  # column H = paid_until
+        ws.update_cell(row_index, 8, paid_until)
     logger.info("Updated %s → status=%s paid_until=%s", phone, status, paid_until)
     return True
-
-
-def remove_subscriber(phone: str) -> bool:
-    """Marks subscriber as 'suspended' (soft delete). Called by USSD STOP flow."""
-    return update_subscriber_status(phone, "suspended")
