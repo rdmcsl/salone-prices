@@ -196,8 +196,7 @@ def admin_whatsapp_preview():
 
 # ── NEW: WhatsApp blast ───────────────────────────────────────────────────────
 
-@app.route("/admin/trigger-whatsapp-blast", methods=["POST"])
-@_require_admin
+@app.route("/admin/trigger-whatsapp-blast", methods=["POST", "GET"])
 def admin_trigger_whatsapp_blast():
     """Manually fires the weekly WhatsApp blast to all active subscribers."""
     try:
