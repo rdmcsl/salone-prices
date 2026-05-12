@@ -276,6 +276,14 @@ def debug_sheets():
         })
     except Exception as e:
         return jsonify({"status": "error", "reason": str(e)})
+@app.route("/debug-sheets2", methods=["GET"])
+def debug_sheets2():
+    try:
+        from sheets import _get_client
+        client = _get_client()
+        return jsonify({"status": "connected", "email": client.auth.service_account_email})
+    except Exception as e:
+        return jsonify({"status": "error", "reason": str(e)})
 @app.route("/debug", methods=["GET"])
 def debug_env():
     from config import PRICES_SHEET_ID, SUBSCRIBERS_SHEET_ID, AT_USERNAME, GOOGLE_CREDS_CONTENT
