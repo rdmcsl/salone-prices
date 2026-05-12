@@ -51,7 +51,7 @@ def _require_admin(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
         key = request.headers.get("X-Admin-Key", "")
-        if key != os.getenv("ADMIN_API_KEY", "changeme"):
+       if key != os.getenv("ADMIN_API_KEY", "saloneprices2024"):
             return jsonify({"error": "unauthorized"}), 401
         return fn(*args, **kwargs)
     return wrapper
