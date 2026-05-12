@@ -67,9 +67,13 @@ def _get_client() -> gspread.Client:
         import json, os
 _creds_raw = os.getenv("GOOGLE_CREDS_JSON", "")
 if _creds_raw.strip().startswith("{"):
-    creds = Credentials.from_service_account_info(json.loads(_creds_raw), scopes=SCOPES)
+    import json as _json, os as _os
+_creds_raw = _os.getenv("GOOGLE_CREDS_JSON", "")
+if _creds_raw.strip().startswith("{"):
+    creds = Credentials.from_service_account_info(_json.loads(_creds_raw), scopes=SCOPES)
 else:
     creds = Credentials.from_service_account_file(_creds_raw, scopes=SCOPES)
+
     return gspread.authorize(creds)
 
 
