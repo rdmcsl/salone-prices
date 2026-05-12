@@ -51,7 +51,7 @@ def _require_admin(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
         key = request.headers.get("X-Admin-Key", "")
-       if key != os.getenv("ADMIN_API_KEY", "saloneprices2024"):
+        if key != os.getenv("ADMIN_API_KEY", "saloneprices2024"):
             return jsonify({"error": "unauthorized"}), 401
         return fn(*args, **kwargs)
     return wrapper
@@ -261,39 +261,6 @@ def signup():
     except Exception as sms_err:
         logger.warning("Welcome SMS failed: %s", sms_err)
     return jsonify({"status": "ok", "message": "Subscribed successfully"})
-@app.route("/debug-sheets", methods=["GET"])
-def debug_sheets():
-    try:
-        import os, json
-        creds_raw = os.getenv("GOOGLE_CREDS_JSON", "").strip()
-        info = json.loads(creds_raw)
-        return jsonify({
-            "status": "json_parsed",
-            "project_id": info.get("project_id"),
-            "client_email": info.get("client_email"),
-            "private_key_starts": info.get("private_key","")[:30],
-        })
-    except Exception as e:
-        return jsonify({"status": "error", "reason": str(e)})
-@app.route("/debug-sheets2", methods=["GET"])
-def debug_sheets2():
-    try:
-        from sheets import _get_client
-        client = _get_client()
-        return jsonify({"status": "connected", "email": client.auth.service_account_email})
-    except Exception as e:
-        return jsonify({"status": "error", "reason": str(e)})
-@app.route("/debug-sheets3", methods=["GET"])
-def debug_sheets3():
-    try:
-        from sheets import _get_client
-        from config import SUBSCRIBERS_SHEET_ID
-        client = _get_client()
-        sheet = client.open_by_key(SUBSCRIBERS_SHEET_ID)
-        worksheets = [ws.title for ws in sheet.worksheets()]
-        return jsonify({"status": "connected", "worksheets": worksheets})
-    except Exception as e:
-        return jsonify({"status": "error", "reason": str(e)})
 
 @app.route("/debug", methods=["GET"])
 def debug_env():
