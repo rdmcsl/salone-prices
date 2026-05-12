@@ -217,6 +217,22 @@ def add_subscriber(
     return True
 
 
+def remove_subscriber(phone: str) -> bool:
+    """Removes a subscriber row by phone number."""
+    client = _get_client()
+    sheet = client.open_by_key(SUBSCRIBERS_SHEET_ID)
+    ws = sheet.worksheet("Subscribers")
+    phones = ws.col_values(1)
+    try:
+        row_index = phones.index(phone) + 1
+        ws.delete_rows(row_index)
+        logger.info("Removed subscriber: %s", phone)
+        return True
+    except ValueError:
+        logger.error("Phone not found for removal: %s", phone)
+        return False
+
+
 def update_subscriber_status(phone: str, status: str, paid_until: str = "") -> bool:
     """Updates status for a given phone number."""
     client = _get_client()
