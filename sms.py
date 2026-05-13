@@ -22,6 +22,7 @@ from config import (
     CROPS, LOG_DIR, MARKETS,
 )
 from sheets import get_active_subscribers, get_best_market
+from cement_prices import CEMENT_PRICES, resolve_district
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +30,11 @@ logger = logging.getLogger(__name__)
 try:
     africastalking.initialize(AT_USERNAME, AT_API_KEY)
     _sms = africastalking.SMS
+    _whatsapp = africastalking.WhatsApp
 except Exception as e:
     logger.warning("AT not initialized: %s", e)
     _sms = None
+    _whatsapp = None
 
 
 # ── SMS Message formatting ───────────────────────────────────────────────────
@@ -297,19 +300,29 @@ def format_whatsapp_cement(name: str, district: str, prices: dict) -> str:
     today = date.today().strftime("%-d %b %Y")
     first = name.split()[0] if name else "there"
 
+    # Resolve district to canonical name; merge hardcoded defaults so prices
+    # are always populated even before the Sheet is seeded.
+    canon  = resolve_district(district)
+    merged = {**CEMENT_PRICES, **prices}   # live Sheet prices override defaults
+
+    imp_whl    = merged.get("cement_imported_wholesale", 175)
+    loc_whl    = merged.get("cement_local_wholesale",    165)
+    imp_retail = _px(merged, "cement_imported", canon)
+    loc_retail = _px(merged, "cement_local",    canon)
+
     return "\n".join([
         f"👋 Hi {first}!",
         "",
         "🏗 *SL Market Tracker — Cement & Construction*",
-        f"📅 Week of {today} · {district}",
+        f"📅 Week of {today} · {canon}",
         "",
         "💰 *WHOLESALE — national (per 50kg bag)*",
-        f"Imported 42.5R......NLe {prices.get('cement_imported_wholesale', '175')}",
-        f"Local 32.5R...........NLe {prices.get('cement_local_wholesale', '165')}",
+        f"Imported 42.5R......NLe {imp_whl}",
+        f"Local 32.5R...........NLe {loc_whl}",
         "",
-        f"🏪 *RETAIL · {district} (per 50kg bag)*",
-        f"Imported 42.5R......NLe {_px(prices, 'cement_imported', district)}",
-        f"Local 32.5R...........NLe {_px(prices, 'cement_local', district)}",
+        f"🏪 *RETAIL · {canon} (per 50kg bag)*",
+        f"Imported 42.5R......NLe {imp_retail}",
+        f"Local 32.5R...........NLe {loc_retail}",
         "",
         "📌 _Ministry of Trade & Industry directive_",
         "🔗 trade.gov.sl/prices",
@@ -322,36 +335,17 @@ def format_whatsapp_cement(name: str, district: str, prices: dict) -> str:
 # ── WhatsApp sender ──────────────────────────────────────────────────────────
 
 def send_whatsapp_msg(phone: str, message: str) -> dict:
-    import requests
-    # Ensure E.164 format
-    phone = str(phone).strip().replace(" ", "").replace("-", "")
-    if not phone.startswith("+"):
-        phone = "+" + phone
-    url = "https://api.sandbox.africastalking.com/version1/messaging/whatsapp"
     """
-    Sends a single WhatsApp message via Africa's Talking REST API.
-    The AT Python SDK does not support WhatsApp — we call the API directly.
+    Sends a single WhatsApp message via Africa's Talking SDK.
     Phone must be in E.164 format: +23276XXXXXXX
     """
-    import requests
-    url = "https://api.sandbox.africastalking.com/version1/messaging/whatsapp"
-    if os.getenv("NODE_ENV", "sandbox") == "production":
-        url = "https://api.africastalking.com/version1/messaging/whatsapp"
     try:
-        payload = {
-            "username": AT_USERNAME,
-            "to":       phone,
-            "from":     os.getenv("AT_WHATSAPP_SENDER", ""),
-            "message":  message,
-        }
-        headers = {
-            "apiKey":       AT_API_KEY,
-            "Accept":       "application/json",
-            "Content-Type": "application/json",
-        }
-        resp = requests.post(url, json=payload, headers=headers, timeout=10)
-        logger.info("WhatsApp sent to %s: %s", phone, resp.status_code)
-        return resp.json()
+        response = _whatsapp.send(
+            message=message,
+            to=[phone],
+        )
+        logger.info("WhatsApp sent to %s", phone)
+        return response
     except Exception as exc:
         logger.error("WhatsApp failed to %s: %s", phone, exc)
         return {"error": str(exc)}
@@ -389,30 +383,27 @@ def run_weekly_whatsapp_blast(prices: dict) -> list[dict]:
             msg  = format_whatsapp_food(name, district, prices, plan)
             resp = send_whatsapp_msg(phone, msg)
             results.append({
-    "phone": phone, "category": "food",
-    "status": "success" if "error" not in resp else "failed",
-    "error": resp.get("error", ""),
-})
+                "phone": phone, "category": "food",
+                "status": "success" if "error" not in resp else "failed",
+            })
 
         # Fuel — pro/biz only
         if "fuel" in cats and plan in ("pro", "biz"):
             msg  = format_whatsapp_fuel(name, district, prices)
             resp = send_whatsapp_msg(phone, msg)
-           results.append({
-    "phone": phone, "category": "food",
-    "status": "success" if "error" not in resp else "failed",
-    "error": resp.get("error", ""),
-})
+            results.append({
+                "phone": phone, "category": "fuel",
+                "status": "success" if "error" not in resp else "failed",
+            })
 
         # Cement — pro/biz only
         if "cement" in cats and plan in ("pro", "biz"):
             msg  = format_whatsapp_cement(name, district, prices)
             resp = send_whatsapp_msg(phone, msg)
             results.append({
-    "phone": phone, "category": "food",
-    "status": "success" if "error" not in resp else "failed",
-    "error": resp.get("error", ""),
-})
+                "phone": phone, "category": "cement",
+                "status": "success" if "error" not in resp else "failed",
+            })
 
     _log_results(results)
     sent   = sum(1 for r in results if r["status"] == "success")
@@ -420,17 +411,15 @@ def run_weekly_whatsapp_blast(prices: dict) -> list[dict]:
     logger.info("WhatsApp blast complete: %d sent, %d failed", sent, failed)
     return results
 
+
+# ── Logging ──────────────────────────────────────────────────────────────────
+
 def _log_results(results: list[dict]) -> None:
     """Writes send results to a dated CSV file in logs/."""
     os.makedirs(LOG_DIR, exist_ok=True)
     filename = os.path.join(LOG_DIR, f"sms_log_{date.today().isoformat()}.csv")
-    if not results:
-        return
-    fieldnames = list(results[0].keys())
     with open(filename, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+        writer = csv.DictWriter(f, fieldnames=["phone", "status", "message", "response"])
         writer.writeheader()
         writer.writerows(results)
     logger.info("SMS log written to %s", filename)
-# ── Logging ──────────────────────────────────────────────────────────────────
-
