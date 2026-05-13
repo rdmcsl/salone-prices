@@ -71,6 +71,39 @@ def _get_gspread_client() -> gspread.Client:
     return gspread.authorize(creds)
 
 
+# ── Market name normalisation ────────────────────────────────────────────────
+# Maps every variant spelling found in the Sheet to the canonical district name
+# used in cement_prices.py and sms.py formatting functions.
+_MARKET_NORM: dict[str, str] = {
+    "freetown":           "Western Area",
+    "western area":       "Western Area",
+    "western":            "Western Area",
+    "western area urban": "Western Area",
+    "western area rural": "Western Area",
+    "bo":                 "Bo",
+    "kenema":             "Kenema",
+    "kono":               "Kono",
+    "koidu":              "Kono",
+    "kailahun":           "Kailahun",
+    "kambia":             "Kambia",
+    "koinadugu":          "Kabala",
+    "kabala":             "Kabala",
+    "moyamba":            "Moyamba",
+    "bonthe":             "Bonthe",
+    "pujehun":            "Pujehun",
+    "bombali":            "Makeni",
+    "makeni":             "Makeni",
+    "tonkolili":          "Tonkolili",
+    "port loko":          "Port Loko",
+    "portloko":           "Port Loko",
+    "karene":             "Karene",
+}
+
+def _normalise_market(raw: str) -> str:
+    """Return canonical district name for any market string from the Sheet."""
+    return _MARKET_NORM.get(raw.strip().lower(), raw.strip().title())
+
+
 # ── Prices ────────────────────────────────────────────────────────────────────
 
 def get_latest_prices() -> dict:
@@ -97,9 +130,10 @@ def get_latest_prices() -> dict:
             # Keep only the latest row per market
             latest: dict[str, dict] = {}
             for row in records:
-                mkt = str(row.get("market", "")).strip().lower()
-                if not mkt:
+                raw_mkt = str(row.get("market", "")).strip()
+                if not raw_mkt:
                     continue
+                mkt = _normalise_market(raw_mkt)   # canonical district name
                 row_date_str = str(row.get("date", "1970-01-01"))
                 try:
                     row_date = datetime.strptime(row_date_str, "%Y-%m-%d").date()
