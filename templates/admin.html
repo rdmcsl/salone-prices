@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SaloneMarket Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #00c853;
+    --green-dim: #00a844;
+    --amber: #ffab00;
+    --red: #ff3d3d;
+    --bg: #0a0f0d;
+    --bg2: #111a14;
+    --bg3: #182019;
+    --border: #1e2e20;
+    --text: #e8f5e9;
+    --text2: #7a9e7e;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--green); letter-spacing: -0.5px; }
+  .logo span { color: var(--text2); }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 8px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .live-badge { font-family: var(--mono); font-size: 11px; color: var(--text2); display: flex; align-items: center; }
+
+  main { max-width: 960px; margin: 0 auto; padding: 32px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+  .card-label { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); margin-bottom: 8px; }
+  .card-value { font-family: var(--mono); font-size: 32px; font-weight: 600; color: var(--text); }
+  .card-sub { font-size: 12px; color: var(--text2); margin-top: 4px; }
+
+  .section { margin-bottom: 28px; }
+  .section-title { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 12px 24px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-primary { background: var(--green); color: #000; }
+  .btn-primary:hover { background: var(--green-dim); }
+  .btn-secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--green); color: var(--green); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .log {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text2);
+    min-height: 120px;
+    max-height: 300px;
+    overflow-y: auto;
+    line-height: 1.8;
+  }
+  .log .ok { color: var(--green); }
+  .log .err { color: var(--red); }
+  .log .info { color: var(--amber); }
+  .log-line::before { content: '> '; color: var(--border); }
+
+  .preview-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    font-size: 13px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    color: var(--text);
+    min-height: 80px;
+  }
+  .preview-tabs { display: flex; gap: 0; margin-bottom: 0; }
+  .preview-tab {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 8px 16px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text2);
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    margin-right: 4px;
+  }
+  .preview-tab.active { background: var(--bg2); color: var(--green); border-color: var(--green); }
+  .preview-wrap { border: 1px solid var(--border); border-radius: 0 8px 8px 8px; overflow: hidden; }
+
+  .key-input-row { display: flex; gap: 12px; align-items: center; margin-bottom: 24px; }
+  .key-input {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 14px;
+    border-radius: 6px;
+    flex: 1;
+    max-width: 320px;
+  }
+  .key-input:focus { outline: none; border-color: var(--green); }
+  .key-label { font-family: var(--mono); font-size: 11px; color: var(--text2); white-space: nowrap; }
+
+  select.key-input { cursor: pointer; }
+
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } main { padding: 16px; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Salone<span>Market</span> / admin</div>
+  <div class="live-badge"><span class="status-dot"></span>live</div>
+</header>
+
+<main>
+
+  <!-- API Key -->
+  <div class="key-input-row">
+    <span class="key-label">Admin key:</span>
+    <input class="key-input" type="password" id="apiKey" placeholder="saloneprices2024" value="saloneprices2024">
+  </div>
+
+  <!-- Stats cards -->
+  <div class="grid">
+    <div class="card">
+      <div class="card-label">Subscribers</div>
+      <div class="card-value" id="subCount">—</div>
+      <div class="card-sub">active + trial</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Last blast</div>
+      <div class="card-value" id="lastBlast">—</div>
+      <div class="card-sub">messages sent</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Prices loaded</div>
+      <div class="card-value" id="priceCount">—</div>
+      <div class="card-sub">crop categories</div>
+    </div>
+  </div>
+
+  <!-- Preview -->
+  <div class="section">
+    <div class="section-title">Message preview</div>
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <select class="key-input" id="previewDistrict" style="max-width:180px">
+        <option>Western Area</option>
+        <option>Bo</option>
+        <option>Kenema</option>
+        <option>Makeni</option>
+        <option>Port Loko</option>
+        <option>Kono</option>
+        <option>Kailahun</option>
+        <option>Kambia</option>
+        <option>Kabala</option>
+        <option>Moyamba</option>
+        <option>Bonthe</option>
+        <option>Pujehun</option>
+        <option>Tonkolili</option>
+        <option>Karene</option>
+      </select>
+      <select class="key-input" id="previewPlan" style="max-width:120px">
+        <option value="free">Free</option>
+        <option value="pro">Pro</option>
+        <option value="biz">Business</option>
+      </select>
+      <button class="btn btn-secondary" onclick="loadPreview()">↺ Refresh preview</button>
+    </div>
+    <div class="preview-tabs">
+      <div class="preview-tab active" onclick="showTab('food',this)">food</div>
+      <div class="preview-tab" onclick="showTab('fuel',this)">fuel</div>
+      <div class="preview-tab" onclick="showTab('cement',this)">cement</div>
+    </div>
+    <div class="preview-wrap">
+      <div class="preview-box" id="previewBox">Loading preview...</div>
+    </div>
+  </div>
+
+  <!-- Blast actions -->
+  <div class="section">
+    <div class="section-title">Blast controls</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnWA" onclick="triggerBlast('whatsapp')">
+        ▶ Send WhatsApp to all subscribers
+      </button>
+      <button class="btn btn-secondary" id="btnSMS" onclick="triggerBlast('sms')">
+        ▶ Send SMS to all subscribers
+      </button>
+    </div>
+  </div>
+
+  <!-- Log output -->
+  <div class="section">
+    <div class="section-title">Activity log</div>
+    <div class="log" id="logBox">
+      <div class="log-line info">Admin panel ready.</div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  const BASE = '';
+  let previewData = {};
+
+  function key() { return document.getElementById('apiKey').value.trim(); }
+
+  function log(msg, type='') {
+    const box = document.getElementById('logBox');
+    const d = document.createElement('div');
+    d.className = 'log-line ' + type;
+    d.textContent = new Date().toTimeString().slice(0,8) + ' ' + msg;
+    box.appendChild(d);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function showTab(cat, el) {
+    document.querySelectorAll('.preview-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    const box = document.getElementById('previewBox');
+    if (previewData[cat]) {
+      box.textContent = previewData[cat];
+    } else {
+      box.textContent = 'No data for this category.';
+    }
+  }
+
+  async function loadPreview() {
+    const district = document.getElementById('previewDistrict').value;
+    const plan = document.getElementById('previewPlan').value;
+    const box = document.getElementById('previewBox');
+    box.textContent = 'Loading...';
+    try {
+      const r = await fetch(`/admin/whatsapp-preview?key=${encodeURIComponent(key())}&district=${encodeURIComponent(district)}&plan=${plan}`);
+      const d = await r.json();
+      if (d.status === 'ok') {
+        previewData = d.messages;
+        const activeTab = document.querySelector('.preview-tab.active').textContent;
+        box.textContent = previewData[activeTab] || '—';
+        log(`Preview loaded for ${district} (${plan})`, 'ok');
+      } else {
+        box.textContent = 'Error: ' + (d.reason || 'unknown');
+        log('Preview error: ' + d.reason, 'err');
+      }
+    } catch(e) {
+      box.textContent = 'Failed to load preview.';
+      log('Preview fetch failed: ' + e.message, 'err');
+    }
+  }
+
+  async function loadStats() {
+    try {
+      const r = await fetch(`/admin/subscribers?key=${encodeURIComponent(key())}`);
+      const d = await r.json();
+      if (d.count !== undefined) {
+        document.getElementById('subCount').textContent = d.count;
+      }
+    } catch(e) {}
+
+    try {
+      const r = await fetch(`/admin/prices?key=${encodeURIComponent(key())}`);
+      const d = await r.json();
+      const count = Object.keys(d).filter(k => !k.startsWith('cement_')).length;
+      document.getElementById('priceCount').textContent = count;
+    } catch(e) {}
+  }
+
+  async function triggerBlast(type) {
+    const btnId = type === 'whatsapp' ? 'btnWA' : 'btnSMS';
+    const endpoint = type === 'whatsapp' ? '/admin/trigger-whatsapp-blast' : '/admin/trigger-blast';
+    const btn = document.getElementById(btnId);
+    btn.disabled = true;
+    btn.textContent = '⏳ Sending...';
+    log(`Starting ${type} blast...`, 'info');
+
+    try {
+      const r = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'X-Admin-Key': key(), 'Content-Type': 'application/json' }
+      });
+      const d = await r.json();
+      if (d.status === 'ok') {
+        document.getElementById('lastBlast').textContent = d.sent;
+        log(`${type} blast done — ${d.sent} sent, ${d.failed} failed`, 'ok');
+      } else {
+        log(`${type} blast error: ${d.reason || JSON.stringify(d)}`, 'err');
+      }
+    } catch(e) {
+      log(`${type} blast failed: ${e.message}`, 'err');
+    }
+
+    btn.disabled = false;
+    btn.textContent = type === 'whatsapp' ? '▶ Send WhatsApp to all subscribers' : '▶ Send SMS to all subscribers';
+  }
+
+  // Init
+  loadStats();
+  loadPreview();
+</script>
+</body>
+</html>
