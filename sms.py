@@ -210,9 +210,14 @@ def run_weekly_blast(prices: dict) -> list[dict]:
         return []
 
     def build_message(sub: dict) -> str:
-        crops = [c.strip() for c in str(sub.get("crops", "")).split(",") if c.strip()]
+        raw = [c.strip() for c in str(sub.get("crops", "")).split(",") if c.strip()]
+        # Only keep crop keys that exist in both CROPS config and prices dict
+        crops = [c for c in raw if c in CROPS and c in prices]
         if not crops:
-            crops = ["rice", "cassava", "palm_oil"]
+            # Fall back to whatever food items we have prices for
+            crops = [c for c in ["rice_local", "rice_imported", "cassava", "palm_oil"] if c in prices]
+        if not crops:
+            crops = list(prices.keys())[:3]
         return format_price_sms(prices, crops)
 
     results = send_bulk_sms(subscribers, build_message)
@@ -416,10 +421,15 @@ def run_weekly_whatsapp_blast(prices: dict) -> list[dict]:
 
 def _log_results(results: list[dict]) -> None:
     """Writes send results to a dated CSV file in logs/."""
+    if not results:
+        return
     os.makedirs(LOG_DIR, exist_ok=True)
     filename = os.path.join(LOG_DIR, f"sms_log_{date.today().isoformat()}.csv")
-    with open(filename, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["phone", "status", "message", "response"])
-        writer.writeheader()
+    # Derive fieldnames from actual result keys so SMS and WhatsApp both work
+    fieldnames = list(dict.fromkeys(k for r in results for k in r.keys()))
+    with open(filename, "a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+        if f.tell() == 0:
+            writer.writeheader()
         writer.writerows(results)
-    logger.info("SMS log written to %s", filename)
+    logger.info("Log written to %s (%d rows)", filename, len(results))
