@@ -108,53 +108,85 @@ def _normalise_market(raw: str) -> str:
 
 def get_latest_prices() -> dict:
     """
-    Reads the most recent price for every crop in every market.
-    Returns nested dict: prices[crop_key][district] = price_nle (int)
-    Falls back to cement_prices.py constants for cement keys.
+    Reads prices from Google Sheets. Supports two formats:
+
+    Format A (preferred) — single "Prices" tab:
+        crop | freetown | bo | kenema | makeni | koidu | date | source
+        rice_local | 460 | 420 | 410 | 415 | 430 | 2026-05-13 | WFP
+
+    Format B (legacy) — one tab per crop (e.g. "Rice"):
+        date | market | price_nle | source
+
+    Format A is tried first; falls back to Format B if "Prices" tab missing.
+    Cement prices are always merged from constants / "Cement Prices" tab.
     """
     try:
         gc = _get_gspread_client()
         sh = gc.open_by_key(PRICES_SHEET_ID)
-
         prices: dict = {}
 
-        for crop_key, crop_info in CROPS.items():
-            tab_name = crop_info.get("sheet_tab", crop_info["name"])
-            try:
-                ws      = sh.worksheet(tab_name)
-                records = ws.get_all_records()
-            except gspread.exceptions.WorksheetNotFound:
-                logger.warning("Sheet tab '%s' not found – skipping", tab_name)
-                continue
+        # ── Format A: single Prices tab ──────────────────────────────────────
+        try:
+            ws      = sh.worksheet("Prices")
+            records = ws.get_all_records()
+            _PRICE_COLS = ["freetown", "bo", "kenema", "makeni", "koidu",
+                           "western area", "port loko", "bonthe", "moyamba",
+                           "pujehun", "kailahun", "kenema", "kono", "kambia",
+                           "tonkolili", "karene"]
 
-            # Keep only the latest row per market
-            latest: dict[str, dict] = {}
             for row in records:
-                raw_mkt = str(row.get("market", "")).strip()
-                if not raw_mkt:
+                crop_key = str(row.get("crop", "")).strip().lower().replace(" ", "_")
+                if not crop_key:
                     continue
-                mkt = _normalise_market(raw_mkt)   # canonical district name
-                row_date_str = str(row.get("date", "1970-01-01"))
+                crop_prices = {}
+                for col, val in row.items():
+                    if col.lower() in ("crop", "date", "source", ""):
+                        continue
+                    if val == "" or val is None:
+                        continue
+                    try:
+                        canon = _normalise_market(str(col))
+                        crop_prices[canon] = int(float(str(val).replace(",", "")))
+                    except (ValueError, TypeError):
+                        pass
+                if crop_prices:
+                    prices[crop_key] = crop_prices
+
+            logger.info("Prices loaded from single tab: %d crops", len(prices))
+
+        except gspread.exceptions.WorksheetNotFound:
+            # ── Format B: one tab per crop ────────────────────────────────────
+            logger.info("No 'Prices' tab — falling back to per-crop tabs")
+            for crop_key, crop_info in CROPS.items():
+                tab_name = crop_info.get("sheet_tab", crop_info.get("name", crop_key))
                 try:
-                    row_date = datetime.strptime(row_date_str, "%Y-%m-%d").date()
-                except ValueError:
-                    row_date = date.min
+                    ws      = sh.worksheet(tab_name)
+                    records = ws.get_all_records()
+                except gspread.exceptions.WorksheetNotFound:
+                    continue
 
-                if mkt not in latest or row_date > latest[mkt]["_date"]:
-                    latest[mkt] = {
-                        "_date":     row_date,
-                        "price_nle": row.get("price_nle", 0),
-                    }
+                latest: dict[str, dict] = {}
+                for row in records:
+                    raw_mkt = str(row.get("market", "")).strip()
+                    if not raw_mkt:
+                        continue
+                    mkt = _normalise_market(raw_mkt)
+                    row_date_str = str(row.get("date", "1970-01-01"))
+                    try:
+                        row_date = datetime.strptime(row_date_str, "%Y-%m-%d").date()
+                    except ValueError:
+                        row_date = date.min
+                    if mkt not in latest or row_date > latest[mkt]["_date"]:
+                        latest[mkt] = {"_date": row_date, "price_nle": row.get("price_nle", 0)}
 
-            prices[crop_key] = {
-                mkt: int(data["price_nle"])
-                for mkt, data in latest.items()
-                if data["price_nle"]
-            }
+                prices[crop_key] = {
+                    mkt: int(data["price_nle"])
+                    for mkt, data in latest.items()
+                    if data["price_nle"]
+                }
 
-        # Merge in cement prices (Sheet tab wins over hardcoded constants)
+        # Always merge cement prices
         _merge_cement_prices(sh, prices)
-
         return prices
 
     except Exception as exc:
