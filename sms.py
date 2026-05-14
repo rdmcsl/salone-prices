@@ -1,438 +1,228 @@
 """
-SaloneMarket – SMS sender
+SaloneMarket – Flask application entry point
 
-Handles:
-  - Formatting the weekly price alert SMS (fits in 160 chars)
-  - Sending bulk SMS to all active subscribers via Africa's Talking
-  - Sending individual confirmation / notification SMS
-  - Weekly WhatsApp digest (Food, Fuel, Cement)
-  - Logging send results to a dated CSV in logs/
+Routes:
+  POST /ussd                        Africa's Talking USSD callback
+  POST /webhooks/orange-money       Orange Money payment webhook
+  POST /webhooks/sms-delivery       SMS delivery report callback
+  POST /webhooks/whatsapp-incoming  Inbound WhatsApp messages
+  GET  /health                      Uptime check
+  GET  /admin                       Admin dashboard (HTML)
+  GET  /admin/subscribers           List all subscribers (JSON)
+  GET  /admin/prices                Latest prices (JSON)
+  GET  /admin/whatsapp-preview      Preview WhatsApp messages (JSON)
+  POST /admin/trigger-blast         Manual SMS blast
+  POST /admin/trigger-whatsapp-blast Manual WhatsApp blast
 """
 
-import csv
 import logging
 import os
-from datetime import date
-from typing import Optional
 
-import africastalking
+from flask import Flask, jsonify, request
 
-from config import (
-    AT_API_KEY, AT_SENDER_ID, AT_USERNAME,
-    CROPS, LOG_DIR, MARKETS,
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s – %(message)s",
 )
-from sheets import get_active_subscribers, get_best_market
-from cement_prices import CEMENT_PRICES, resolve_district
-
 logger = logging.getLogger(__name__)
 
-# Initialise Africa's Talking SDK once at import time
-try:
-    africastalking.initialize(AT_USERNAME, AT_API_KEY)
-    _sms = africastalking.SMS
-    _whatsapp = africastalking.WhatsApp
-except Exception as e:
-    logger.warning("AT not initialized: %s", e)
-    _sms = None
-    _whatsapp = None
+app = Flask(__name__, static_folder="templates", static_url_path="")
 
 
-# ── SMS Message formatting ───────────────────────────────────────────────────
+# ── Auth helper ───────────────────────────────────────────────────────────────
 
-def format_price_sms(prices: dict, subscriber_crops: list[str]) -> str:
+def _admin_key_ok() -> bool:
+    """Check X-Admin-Key header or ?key= query param."""
+    expected = os.getenv("ADMIN_API_KEY", "saloneprices2024")
+    provided = (
+        request.headers.get("X-Admin-Key", "")
+        or request.args.get("key", "")
+        or (request.get_json(silent=True) or {}).get("key", "")
+    )
+    return provided == expected
+
+
+# ── Public routes ─────────────────────────────────────────────────────────────
+
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok", "service": "SaloneMarket"})
+
+
+@app.route("/ussd", methods=["POST"])
+def ussd_callback():
+    from ussd import handle_ussd
+    session_id   = request.form.get("sessionId", "")
+    phone_number = request.form.get("phoneNumber", "")
+    text         = request.form.get("text", "")
+    service_code = request.form.get("serviceCode", "")
+    response_text = handle_ussd(session_id, phone_number, text, service_code)
+    logger.info("USSD %s → %d chars", phone_number, len(response_text))
+    return response_text, 200, {"Content-Type": "text/plain"}
+
+
+@app.route("/webhooks/orange-money", methods=["POST"])
+def orange_money_webhook():
+    from payments import handle_orange_webhook
+    raw_body  = request.get_data()
+    signature = request.headers.get("X-Orange-Signature", "")
+    payload   = request.get_json(silent=True) or {}
+    result    = handle_orange_webhook(payload, raw_body, signature)
+    return jsonify(result), 200
+
+
+@app.route("/webhooks/sms-delivery", methods=["POST"])
+def sms_delivery_report():
+    data = request.get_json(silent=True) or request.form.to_dict()
+    logger.info("SMS delivery report: %s", data)
+    return jsonify({"status": "received"}), 200
+
+
+@app.route("/webhooks/whatsapp-incoming", methods=["POST"])
+def whatsapp_incoming():
+    data  = request.get_json(silent=True) or request.form.to_dict()
+    phone = data.get("from", data.get("phoneNumber", ""))
+    text  = (data.get("text", "") or "").strip().upper()
+    logger.info("Inbound WhatsApp from %s: %s", phone, text)
+
+    if text in ("STOP", "UNSUBSCRIBE"):
+        from sheets import unsubscribe
+        unsubscribe(phone)
+        from sms import send_whatsapp_msg
+        send_whatsapp_msg(phone, "You've been unsubscribed from SaloneMarket. Reply START to re-subscribe.")
+
+    return jsonify({"status": "ok"}), 200
+
+
+# ── Admin routes ──────────────────────────────────────────────────────────────
+
+@app.route("/admin")
+def admin_dashboard():
+    """Serve the admin HTML page."""
+    import os
+    html_path = os.path.join(app.static_folder or "templates", "admin.html")
+    if os.path.exists(html_path):
+        with open(html_path, encoding="utf-8") as f:
+            return f.read(), 200, {"Content-Type": "text/html"}
+    return "<h1>SaloneMarket Admin</h1><p>admin.html not found in templates/</p>", 200
+
+
+@app.route("/admin/subscribers")
+def admin_subscribers():
+    if not _admin_key_ok():
+        return jsonify({"status": "error", "reason": "unauthorized"}), 401
+    from sheets import get_all_subscribers
+    subs = get_all_subscribers()
+    return jsonify({"count": len(subs), "subscribers": subs})
+
+
+@app.route("/admin/prices")
+def admin_prices():
+    if not _admin_key_ok():
+        return jsonify({"status": "error", "reason": "unauthorized"}), 401
+    from sheets import get_latest_prices
+    prices = get_latest_prices()
+    return jsonify(prices)
+
+
+@app.route("/admin/whatsapp-preview")
+def admin_whatsapp_preview():
     """
-    Builds a single SMS (<=160 chars) for the given subscriber's chosen crops.
-
-    Example output:
-        SaloneMarket 28 Apr
-        RICE: Bo 420 | FTN 460 | Ken 410
-        CASSAVA: Bo 80 | FTN 95
-        Best: sell RICE in Freetown.
-        Txt STOP to unsub
+    Returns sample WhatsApp messages for each category so you can
+    verify formatting before the Monday blast.
+    Query params:
+      ?district=Western Area   (default: Western Area)
+      ?name=Aminata            (default: Test User)
+      ?plan=pro                (default: free)
     """
-    today = date.today().strftime("%-d %b")
-    lines = [f"SaloneMarket {today}"]
+    if not _admin_key_ok():
+        return jsonify({"status": "error", "reason": "unauthorized"}), 401
 
-    best_crop = None
-    best_market_name = None
-    best_price = 0
+    district = request.args.get("district", "Western Area")
+    name     = request.args.get("name",     "Aminata")
+    plan     = request.args.get("plan",     "free")
 
-    market_abbrev = {
-        "freetown": "FTN",
-        "bo":       "Bo",
-        "kenema":   "Ken",
-        "makeni":   "Mak",
-        "koidu":    "Koi",
-    }
-
-    for crop_key in subscriber_crops:
-        if crop_key not in prices:
-            continue
-        # Gracefully handle keys not in CROPS config (e.g. rice_local, rice_imported)
-        crop_info  = CROPS.get(crop_key, {})
-        crop_name  = crop_info.get("name", crop_key.replace("_", " ")).upper()
-        unit       = crop_info.get("unit", "kg")
-        emoji      = crop_info.get("emoji", "")
-        crop_prices = prices[crop_key]
-        if not crop_prices or not isinstance(crop_prices, dict):
-            continue
-
-        parts = []
-        for mkt, price in sorted(crop_prices.items(), key=lambda x: -x[1]):
-            abbrev = market_abbrev.get(mkt.lower(), mkt[:3].title())
-            parts.append(f"{abbrev} {price:,}")
-            if price > best_price:
-                best_price = price
-                best_crop = crop_name.title()
-                best_market_name = MARKETS.get(mkt, {}).get("name", mkt.title())
-
-        lines.append(f"{emoji} {crop_name}/{unit}: " + " | ".join(parts))
-
-    if best_crop and best_market_name:
-        lines.append(f"💡 Best: sell {best_crop} in {best_market_name}!")
-
-    lines.append("Txt STOP to unsub")
-
-    msg = "\n".join(lines)
-
-    # Trim aggressively if over 160 chars
-    if len(msg) > 160:
-        lines_trimmed = lines[:3] + [lines[-1]]
-        msg = "\n".join(lines_trimmed)
-
-    return msg[:160]
-
-
-def format_welcome_sms(name: str, crops: list[str]) -> str:
-    crop_names = ", ".join(CROPS[c]["name"] for c in crops if c in CROPS)
-    return (
-        f"Welcome to SaloneMarket, {name}! "
-        f"You'll get weekly prices for: {crop_names}. "
-        f"First alert Monday 7am. Txt STOP to unsubscribe."
-    )[:160]
-
-
-def format_payment_confirmation_sms(name: str, paid_until: str) -> str:
-    return (
-        f"SaloneMarket: Payment confirmed, {name}. "
-        f"Subscription active until {paid_until}. Thank you!"
-    )[:160]
-
-
-def format_trial_ending_sms(name: str, days_left: int) -> str:
-    return (
-        f"SaloneMarket: Your trial period ends in {days_left} day(s), {name}. "
-        f"Dial *384*4321# to pay NLE 5,000/month and keep your alerts."
-    )[:160]
-
-
-# ── SMS Sending ──────────────────────────────────────────────────────────────
-
-def send_sms(phone: str, message: str) -> dict:
-    """
-    Sends a single SMS via Africa's Talking (Sierra Leone numbers)
-    or Twilio (international/US numbers).
-    """
-    phone = str(phone).strip()   # coerce int/float from Sheet to string
-    is_salone = phone.startswith("+232")
-    if not is_salone:
-        return _send_via_twilio(phone, message)
-
-    if _sms is None:
-        logger.warning("AT SMS skipped (not initialized): %s", phone)
-        return _send_via_twilio(phone, message)
     try:
-        response = _sms.send(message, [phone], sender_id=AT_SENDER_ID)
-        logger.debug("AT SMS sent to %s: %s", phone, response)
-        return response
+        from sheets import get_latest_prices
+        from sms import format_whatsapp_food, format_whatsapp_fuel, format_whatsapp_cement
+        from cement_prices import CEMENT_PRICES
+
+        prices = get_latest_prices()
+        # Always have cement prices available even before Sheet is seeded
+        merged = {**CEMENT_PRICES, **prices}
+
+        return jsonify({
+            "status":   "ok",
+            "district": district,
+            "plan":     plan,
+            "messages": {
+                "food":   format_whatsapp_food(name, district, merged, plan),
+                "fuel":   format_whatsapp_fuel(name, district, merged),
+                "cement": format_whatsapp_cement(name, district, merged),
+            },
+        })
+
     except Exception as exc:
-        logger.warning("AT SMS failed, trying Twilio: %s", exc)
-        return _send_via_twilio(phone, message)
+        logger.exception("whatsapp-preview failed")
+        return jsonify({"status": "error", "reason": str(exc)}), 500
 
 
-def _send_via_twilio(phone: str, message: str) -> dict:
-    """Fallback SMS via Twilio for international numbers."""
+@app.route("/admin/trigger-blast", methods=["POST"])
+def admin_trigger_blast():
+    """Manually fires the weekly SMS blast."""
+    if not _admin_key_ok():
+        return jsonify({"status": "error", "reason": "unauthorized"}), 401
     try:
-        import os
-        from twilio.rest import Client
-        sid   = os.getenv("TWILIO_ACCOUNT_SID") or "ACf4a122b66ac0a014d516453eeac070c8"
-        token = os.getenv("TWILIO_AUTH_TOKEN")  or "3f40fc6f4f2c93af2860c2f6d858cf12"
-        frm   = os.getenv("TWILIO_FROM_NUMBER") or "+12295623289"
-        if not sid or not token:
-            return {"error": "Twilio not configured"}
-        client = Client(sid, token)
-        msg = client.messages.create(body=message, from_=frm, to=phone)
-        logger.info("Twilio SMS sent to %s: %s", phone, msg.sid)
-        return {"MessageData": {"Message": "Sent", "sid": msg.sid}}
+        from sheets import get_latest_prices
+        from sms import run_weekly_blast
+        prices  = get_latest_prices()
+        results = run_weekly_blast(prices)
+        sent    = sum(1 for r in results if r.get("status") == "success")
+        failed  = sum(1 for r in results if r.get("status") == "failed")
+        return jsonify({"status": "ok", "sent": sent, "failed": failed, "total": len(results)})
     except Exception as exc:
-        logger.error("Twilio SMS failed to %s: %s", phone, exc)
-        return {"error": str(exc)}
+        logger.exception("trigger-blast failed")
+        return jsonify({"status": "error", "reason": str(exc)}), 500
 
 
-def send_bulk_sms(recipients: list[dict], message_fn) -> list[dict]:
-    """Sends personalised SMS to a list of subscriber dicts."""
-    results = []
-    for sub in recipients:
-        phone = sub.get("phone", "")
-        if not phone:
-            continue
-        msg = message_fn(sub)
-        resp = send_sms(phone, msg)
-        status = "success" if "error" not in resp else "failed"
-        results.append({"phone": phone, "status": status, "message": msg, "response": resp})
-
-    _log_results(results)
-    logger.info("Bulk send complete: %d sent, %d failed",
-                sum(1 for r in results if r["status"] == "success"),
-                sum(1 for r in results if r["status"] == "failed"))
-    return results
-
-
-def send_broadcast(phones: list[str], message: str) -> dict:
-    """Sends the SAME message to up to 1,000 numbers in a single API call."""
+@app.route("/admin/trigger-whatsapp-blast", methods=["POST"])
+def admin_trigger_whatsapp_blast():
+    """Manually fires the weekly WhatsApp blast."""
+    if not _admin_key_ok():
+        return jsonify({"status": "error", "reason": "unauthorized"}), 401
     try:
-        response = _sms.send(message, phones, sender_id=AT_SENDER_ID)
-        logger.info("Broadcast sent to %d numbers", len(phones))
-        return response
+        from sheets import get_latest_prices
+        from sms import run_weekly_whatsapp_blast
+        from cement_prices import CEMENT_PRICES
+        prices = get_latest_prices()
+        merged = {**CEMENT_PRICES, **prices}
+        results = run_weekly_whatsapp_blast(merged)
+        sent    = sum(1 for r in results if r.get("status") == "success")
+        failed  = sum(1 for r in results if r.get("status") == "failed")
+        return jsonify({"status": "ok", "sent": sent, "failed": failed, "total": len(results)})
     except Exception as exc:
-        logger.error("Broadcast failed: %s", exc)
-        return {"error": str(exc)}
+        logger.exception("trigger-whatsapp-blast failed")
+        return jsonify({"status": "error", "reason": str(exc)}), 500
 
 
-# ── Weekly SMS blast entry point ─────────────────────────────────────────────
-
-def run_weekly_blast(prices: dict) -> list[dict]:
-    """
-    Main function called by the cron scheduler every Monday at 07:00.
-    Fetches active subscribers, builds personalised SMS, fires them all.
-    """
-    subscribers = get_active_subscribers()
-    if not subscribers:
-        logger.warning("No active subscribers – blast skipped")
-        return []
-
-    def build_message(sub: dict) -> str:
-        raw = [c.strip() for c in str(sub.get("crops", "")).split(",") if c.strip()]
-        # Only keep crop keys that exist in both CROPS config and prices dict
-        crops = [c for c in raw if c in CROPS and c in prices]
-        if not crops:
-            # Fall back to whatever food items we have prices for
-            crops = [c for c in ["rice_local", "rice_imported", "cassava", "palm_oil"] if c in prices]
-        if not crops:
-            crops = list(prices.keys())[:3]
-        return format_price_sms(prices, crops)
-
-    results = send_bulk_sms(subscribers, build_message)
-    return results
-
-
-# ── WhatsApp message formatting ──────────────────────────────────────────────
-
-def _px(prices: dict, crop: str, district: str):
-    """Get price for a crop in a district with fallbacks."""
-    d = prices.get(crop, {})
-    if isinstance(d, dict):
-        return d.get(district) or d.get("Western Area") or d.get("freetown") or "—"
-    return d or "—"
-
-
-def format_whatsapp_food(name: str, district: str, prices: dict, plan: str = "free") -> str:
-    """Formats the weekly Food & Agriculture WhatsApp digest."""
-    today = date.today().strftime("%-d %b %Y")
-    first = name.split()[0] if name else "there"
-    is_pro = plan in ("pro", "biz", "individual")
-
-    lines = [
-        f"👋 Hi {first}!",
-        "",
-        "📊 *SL Market Tracker — Food & Agriculture*",
-        f"📅 Week of {today} · {district}",
-        "",
-        "🌾 *FOOD PRICES (retail)*",
-        f"Rice local 50kg.......NLe {_px(prices, 'rice_local', district)}",
-        f"Rice imported 50kg....NLe {_px(prices, 'rice_imported', district)}",
-        f"Palm oil 1L..............NLe {_px(prices, 'palm_oil', district)}",
-        f"Sugar 50kg...............NLe {_px(prices, 'sugar', district)}",
-        f"Onion 1kg.................NLe {_px(prices, 'onion', district)}",
-    ]
-
-    if is_pro:
-        lines += [
-            f"Tomato 1kg................NLe {_px(prices, 'tomato', district)}",
-            f"Dried fish 1kg............NLe {_px(prices, 'dried_fish', district)}",
-            f"Groundnut oil 1L.........NLe {_px(prices, 'groundnut_oil', district)}",
-            f"Wheat flour 50kg.........NLe {_px(prices, 'wheat_flour', district)}",
-            f"Cassava 50kg..............NLe {_px(prices, 'cassava', district)}",
-        ]
-    else:
-        lines.append("_(Upgrade to Pro for all 15 items)_")
-
-    lines += [
-        "",
-        f"📌 _Retail prices · {district}_",
-        "🔗 trade.gov.sl/prices",
-        "",
-        "_↑ up · ↓ down · — stable vs last week_",
-        "_Reply STOP to unsubscribe_",
-    ]
-    return "\n".join(lines)
-
-
-def format_whatsapp_fuel(name: str, district: str, prices: dict) -> str:
-    """Formats the weekly Fuel & Energy WhatsApp digest."""
-    today = date.today().strftime("%-d %b %Y")
-    first = name.split()[0] if name else "there"
-
-    return "\n".join([
-        f"👋 Hi {first}!",
-        "",
-        "⛽ *SL Market Tracker — Fuel & Energy*",
-        f"📅 Week of {today} · {district}",
-        "",
-        "🚗 *PUMP PRICES (per litre)*",
-        f"Petrol (PMS).......NLe {_px(prices, 'petrol', district)}",
-        f"Diesel (AGO).......NLe {_px(prices, 'diesel', district)}",
-        f"Kerosene (DPK)...NLe {_px(prices, 'kerosene', district)}",
-        "",
-        f"📌 _NPA regulated pump prices · {district}_",
-        "🔗 trade.gov.sl/prices",
-        "",
-        "_↑ up · ↓ down · — stable vs last week_",
-        "_Reply STOP to unsubscribe_",
-    ])
-
-
-def format_whatsapp_cement(name: str, district: str, prices: dict) -> str:
-    """Formats the weekly Cement & Construction WhatsApp digest."""
-    today = date.today().strftime("%-d %b %Y")
-    first = name.split()[0] if name else "there"
-
-    # Resolve district to canonical name; merge hardcoded defaults so prices
-    # are always populated even before the Sheet is seeded.
-    canon  = resolve_district(district)
-    merged = {**CEMENT_PRICES, **prices}   # live Sheet prices override defaults
-
-    imp_whl    = merged.get("cement_imported_wholesale", 175)
-    loc_whl    = merged.get("cement_local_wholesale",    165)
-    imp_retail = _px(merged, "cement_imported", canon)
-    loc_retail = _px(merged, "cement_local",    canon)
-
-    return "\n".join([
-        f"👋 Hi {first}!",
-        "",
-        "🏗 *SL Market Tracker — Cement & Construction*",
-        f"📅 Week of {today} · {canon}",
-        "",
-        "💰 *WHOLESALE — national (per 50kg bag)*",
-        f"Imported 42.5R......NLe {imp_whl}",
-        f"Local 32.5R...........NLe {loc_whl}",
-        "",
-        f"🏪 *RETAIL · {canon} (per 50kg bag)*",
-        f"Imported 42.5R......NLe {imp_retail}",
-        f"Local 32.5R...........NLe {loc_retail}",
-        "",
-        "📌 _Ministry of Trade & Industry directive_",
-        "🔗 trade.gov.sl/prices",
-        "",
-        "_↑ up · ↓ down · — stable vs last week_",
-        "_Reply STOP to unsubscribe_",
-    ])
-
-
-# ── WhatsApp sender ──────────────────────────────────────────────────────────
-
-def send_whatsapp_msg(phone: str, message: str) -> dict:
-    """
-    Sends a single WhatsApp message via Africa's Talking SDK.
-    Phone must be in E.164 format: +23276XXXXXXX
-    """
-    phone = str(phone).strip()   # coerce int/float from Sheet to string
+@app.route("/admin/test-sms")
+def admin_test_sms():
+    """Send a single test SMS to a specified number and return raw AT response."""
+    if not _admin_key_ok():
+        return jsonify({"status": "error", "reason": "unauthorized"}), 401
+    phone = request.args.get("phone", "")
+    if not phone:
+        return jsonify({"status": "error", "reason": "phone param required"}), 400
     try:
-        response = _whatsapp.send(
-            message=message,
-            to=[phone],
-        )
-        logger.info("WhatsApp sent to %s", phone)
-        return response
+        from sms import send_sms
+        resp = send_sms(phone, "SaloneMarket test message. Reply STOP to unsubscribe.")
+        return jsonify({"status": "ok", "phone": phone, "response": str(resp)})
     except Exception as exc:
-        logger.error("WhatsApp failed to %s: %s", phone, exc)
-        return {"error": str(exc)}
+        return jsonify({"status": "error", "reason": str(exc)}), 500
 
 
-# ── Weekly WhatsApp blast ────────────────────────────────────────────────────
+# ── Entry point ───────────────────────────────────────────────────────────────
 
-def run_weekly_whatsapp_blast(prices: dict) -> list[dict]:
-    """
-    Sends personalised WhatsApp digests to all active subscribers every Monday.
-    Each subscriber gets messages for their subscribed categories:
-      - Food  → all plans
-      - Fuel  → pro / biz only
-      - Cement → pro / biz only
-    """
-    subscribers = get_active_subscribers()
-    if not subscribers:
-        logger.warning("No active subscribers — WhatsApp blast skipped")
-        return []
-
-    results = []
-    for sub in subscribers:
-        phone    = sub.get("phone", "")
-        name     = sub.get("name", "")
-        district = sub.get("district", "Western Area") or "Western Area"
-        plan     = sub.get("plan", "free")
-        cats_raw = str(sub.get("categories", "food"))
-        cats     = [c.strip() for c in cats_raw.split(",")]
-
-        if not phone:
-            continue
-
-        # Food — all plans
-        if "food" in cats or not cats:
-            msg  = format_whatsapp_food(name, district, prices, plan)
-            resp = send_whatsapp_msg(phone, msg)
-            results.append({
-                "phone": phone, "category": "food",
-                "status": "success" if "error" not in resp else "failed",
-            })
-
-        # Fuel — pro/biz only
-        if "fuel" in cats and plan in ("pro", "biz"):
-            msg  = format_whatsapp_fuel(name, district, prices)
-            resp = send_whatsapp_msg(phone, msg)
-            results.append({
-                "phone": phone, "category": "fuel",
-                "status": "success" if "error" not in resp else "failed",
-            })
-
-        # Cement — pro/biz only
-        if "cement" in cats and plan in ("pro", "biz"):
-            msg  = format_whatsapp_cement(name, district, prices)
-            resp = send_whatsapp_msg(phone, msg)
-            results.append({
-                "phone": phone, "category": "cement",
-                "status": "success" if "error" not in resp else "failed",
-            })
-
-    _log_results(results)
-    sent   = sum(1 for r in results if r["status"] == "success")
-    failed = sum(1 for r in results if r["status"] == "failed")
-    logger.info("WhatsApp blast complete: %d sent, %d failed", sent, failed)
-    return results
-
-
-# ── Logging ──────────────────────────────────────────────────────────────────
-
-def _log_results(results: list[dict]) -> None:
-    """Writes send results to a dated CSV file in logs/."""
-    if not results:
-        return
-    os.makedirs(LOG_DIR, exist_ok=True)
-    filename = os.path.join(LOG_DIR, f"sms_log_{date.today().isoformat()}.csv")
-    # Derive fieldnames from actual result keys so SMS and WhatsApp both work
-    fieldnames = list(dict.fromkeys(k for r in results for k in r.keys()))
-    with open(filename, "a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
-        if f.tell() == 0:
-            writer.writeheader()
-        writer.writerows(results)
-    logger.info("Log written to %s (%d rows)", filename, len(results))
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
