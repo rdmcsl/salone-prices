@@ -205,6 +205,22 @@ def admin_trigger_whatsapp_blast():
         return jsonify({"status": "error", "reason": str(exc)}), 500
 
 
+@app.route("/admin/test-sms")
+def admin_test_sms():
+    """Send a single test SMS to a specified number and return raw AT response."""
+    if not _admin_key_ok():
+        return jsonify({"status": "error", "reason": "unauthorized"}), 401
+    phone = request.args.get("phone", "")
+    if not phone:
+        return jsonify({"status": "error", "reason": "phone param required"}), 400
+    try:
+        from sms import send_sms
+        resp = send_sms(phone, "SaloneMarket test message. Reply STOP to unsubscribe.")
+        return jsonify({"status": "ok", "phone": phone, "response": str(resp)})
+    except Exception as exc:
+        return jsonify({"status": "error", "reason": str(exc)}), 500
+
+
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
