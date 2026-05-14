@@ -262,11 +262,19 @@ def get_active_subscribers() -> list[dict]:
     try:
         ws      = _open_subscribers_sheet()
         records = ws.get_all_records()
-        return [
-            r for r in records
-            if str(r.get("status", "")).strip().lower() in ("active", "trial")
-            and r.get("phone", "")
-        ]
+        active  = []
+        for r in records:
+            if str(r.get("status", "")).strip().lower() not in ("active", "trial"):
+                continue
+            phone = str(r.get("phone", "")).strip()
+            if not phone or phone in ("0", ""):
+                continue
+            # Ensure E.164 format — prefix + if missing
+            if not phone.startswith("+"):
+                phone = "+" + phone
+            r["phone"] = phone
+            active.append(r)
+        return active
     except Exception as exc:
         logger.error("get_active_subscribers failed: %s", exc)
         return []
