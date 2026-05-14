@@ -68,21 +68,22 @@ def format_price_sms(prices: dict, subscriber_crops: list[str]) -> str:
     for crop_key in subscriber_crops:
         if crop_key not in prices:
             continue
-        crop_info   = CROPS[crop_key]
-        crop_name   = crop_info["name"].upper()
-        unit        = crop_info["unit"]
-        emoji       = crop_info.get("emoji", "")
+        # Gracefully handle keys not in CROPS config (e.g. rice_local, rice_imported)
+        crop_info  = CROPS.get(crop_key, {})
+        crop_name  = crop_info.get("name", crop_key.replace("_", " ")).upper()
+        unit       = crop_info.get("unit", "kg")
+        emoji      = crop_info.get("emoji", "")
         crop_prices = prices[crop_key]
-        if not crop_prices:
+        if not crop_prices or not isinstance(crop_prices, dict):
             continue
 
         parts = []
         for mkt, price in sorted(crop_prices.items(), key=lambda x: -x[1]):
-            abbrev = market_abbrev.get(mkt, mkt[:3].title())
+            abbrev = market_abbrev.get(mkt.lower(), mkt[:3].title())
             parts.append(f"{abbrev} {price:,}")
             if price > best_price:
                 best_price = price
-                best_crop = crop_info["name"]
+                best_crop = crop_name.title()
                 best_market_name = MARKETS.get(mkt, {}).get("name", mkt.title())
 
         lines.append(f"{emoji} {crop_name}/{unit}: " + " | ".join(parts))
@@ -132,6 +133,7 @@ def send_sms(phone: str, message: str) -> dict:
     Sends a single SMS via Africa's Talking (Sierra Leone numbers)
     or Twilio (international/US numbers).
     """
+    phone = str(phone).strip()   # coerce int/float from Sheet to string
     is_salone = phone.startswith("+232")
     if not is_salone:
         return _send_via_twilio(phone, message)
@@ -344,6 +346,7 @@ def send_whatsapp_msg(phone: str, message: str) -> dict:
     Sends a single WhatsApp message via Africa's Talking SDK.
     Phone must be in E.164 format: +23276XXXXXXX
     """
+    phone = str(phone).strip()   # coerce int/float from Sheet to string
     try:
         response = _whatsapp.send(
             message=message,
